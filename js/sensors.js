@@ -25,6 +25,7 @@ DrivePulse.Sensors = (function () {
         currentSpeed: 0,          // km/h
         currentHeading: 0,        // degrees
         currentAcceleration: { x: 0, y: 0, z: 0 },
+        gravity: { x: 0, y: 0, z: 9.81 }, // For Low-Pass Filter
         currentRotationRate: { alpha: 0, beta: 0, gamma: 0 },
         gpsAccuracy: null,
         altitude: null,
@@ -269,10 +270,25 @@ DrivePulse.Sensors = (function () {
         // Rotation rate
         const rotation = event.rotationRate || {};
 
-        // Use pure acceleration if available, otherwise fallback
-        const ax = pureAccel.x ?? (accel.x || 0);
-        const ay = pureAccel.y ?? (accel.y || 0);
-        const az = pureAccel.z ?? ((accel.z || 0) - 9.81); // Remove gravity estimate
+        // Use pure acceleration if available, otherwise fallback using a Low-Pass Filter
+        let ax = 0, ay = 0, az = 0;
+
+        if (pureAccel && typeof pureAccel.x === 'number') {
+            ax = pureAccel.x;
+            ay = pureAccel.y;
+            az = pureAccel.z;
+        } else if (accel && typeof accel.x === 'number') {
+            // Low-pass filter to isolate gravity
+            const alpha = 0.8;
+            state.gravity.x = alpha * state.gravity.x + (1 - alpha) * accel.x;
+            state.gravity.y = alpha * state.gravity.y + (1 - alpha) * accel.y;
+            state.gravity.z = alpha * state.gravity.z + (1 - alpha) * accel.z;
+
+            // Remove gravity to leave pure acceleration
+            ax = accel.x - state.gravity.x;
+            ay = accel.y - state.gravity.y;
+            az = accel.z - state.gravity.z;
+        }
 
         state.currentAcceleration = { x: ax, y: ay, z: az };
 

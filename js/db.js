@@ -10,7 +10,7 @@ DrivePulse.DB = (function () {
     'use strict';
 
     const DB_NAME = 'DrivePulseDB';
-    const DB_VERSION = 2;
+    const DB_VERSION = 3;
     let db = null;
 
     // ===== OPEN DATABASE =====
@@ -58,6 +58,20 @@ DrivePulse.DB = (function () {
                     const notifStore = d.createObjectStore('notifications', { keyPath: 'id', autoIncrement: true });
                     notifStore.createIndex('timestamp', 'timestamp', { unique: false });
                     notifStore.createIndex('read', 'read', { unique: false });
+                }
+
+                // Infrastructure Events store (CityPulse)
+                if (!d.objectStoreNames.contains('infraEvents')) {
+                    const infraStore = d.createObjectStore('infraEvents', { keyPath: 'id', autoIncrement: true });
+                    infraStore.createIndex('type', 'type', { unique: false });
+                    infraStore.createIndex('timestamp', 'timestamp', { unique: false });
+                    infraStore.createIndex('tripId', 'tripId', { unique: false });
+                }
+
+                // Road Segments store (aggregated quality per segment)
+                if (!d.objectStoreNames.contains('roadSegments')) {
+                    const segStore = d.createObjectStore('roadSegments', { keyPath: 'id', autoIncrement: true });
+                    segStore.createIndex('timestamp', 'timestamp', { unique: false });
                 }
             };
 
@@ -107,10 +121,11 @@ DrivePulse.DB = (function () {
 
     async function deleteTrip(id) {
         await open();
-        const store = getStore('trips', 'readwrite');
-        // Also delete associated GPS points and sensor events
-        const gpsStore = getStore('gpsPoints', 'readwrite');
-        const sensorStore = getStore('sensorEvents', 'readwrite');
+        // Use a SINGLE transaction for all three stores to prevent InvalidStateError
+        const tx = db.transaction(['trips', 'gpsPoints', 'sensorEvents'], 'readwrite');
+        const tripStore = tx.objectStore('trips');
+        const gpsStore = tx.objectStore('gpsPoints');
+        const sensorStore = tx.objectStore('sensorEvents');
 
         // Delete GPS points for this trip
         const gpsIndex = gpsStore.index('tripId');
@@ -134,7 +149,13 @@ DrivePulse.DB = (function () {
             }
         };
 
-        return promisify(store.delete(id));
+        // Delete the trip itself
+        tripStore.delete(id);
+
+        return new Promise((resolve, reject) => {
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+        });
     }
 
     async function getTripsByDateRange(startDate, endDate) {
@@ -284,6 +305,60 @@ DrivePulse.DB = (function () {
         return promisify(store.clear());
     }
 
+    // ===== INFRASTRUCTURE EVENTS (CityPulse) =====
+    async function saveInfraEvent(event) {
+        await open();
+        const store = getStore('infraEvents', 'readwrite');
+        event.timestamp = event.timestamp || Date.now();
+        return promisify(store.put(event));
+    }
+
+    async function getAllInfraEvents() {
+        await open();
+        const store = getStore('infraEvents');
+        return promisify(store.getAll());
+    }
+
+    async function getInfraEventsByType(type) {
+        await open();
+        const store = getStore('infraEvents');
+        const index = store.index('type');
+        return promisify(index.getAll(IDBKeyRange.only(type)));
+    }
+
+    async function clearInfraEvents() {
+        await open();
+        const store = getStore('infraEvents', 'readwrite');
+        return promisify(store.clear());
+    }
+
+    async function deleteInfraEvent(id) {
+        if (!id) return;
+        await open();
+        const store = getStore('infraEvents', 'readwrite');
+        return promisify(store.delete(id));
+    }
+
+    // ===== ROAD SEGMENTS =====
+    async function saveRoadSegment(segment) {
+        await open();
+        const store = getStore('roadSegments', 'readwrite');
+        segment.timestamp = segment.timestamp || Date.now();
+        return promisify(store.add(segment));
+    }
+
+    async function getAllRoadSegments() {
+        await open();
+        const store = getStore('roadSegments');
+        return promisify(store.getAll());
+    }
+
+    async function clearRoadSegments() {
+        await open();
+        const store = getStore('roadSegments', 'readwrite');
+        return promisify(store.clear());
+    }
+
     // ===== PUBLIC API =====
     return {
         open,
@@ -314,5 +389,14 @@ DrivePulse.DB = (function () {
         markAllNotificationsRead,
         getUnreadCount,
         clearAllNotifications,
+        // Infrastructure (CityPulse)
+        saveInfraEvent,
+        getAllInfraEvents,
+        getInfraEventsByType,
+        clearInfraEvents,
+        deleteInfraEvent,
+        saveRoadSegment,
+        getAllRoadSegments,
+        clearRoadSegments,
     };
 })();

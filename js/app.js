@@ -10,6 +10,7 @@
     const DB = DrivePulse.DB;
     const Sensors = DrivePulse.Sensors;
     const TripEngine = DrivePulse.TripEngine;
+    const CityPulse = DrivePulse.CityPulse;
 
     // ===== UI STATE =====
     const ui = {
@@ -17,6 +18,9 @@
         previousScreen: null,
         charts: {},
         map: null,
+        liveMap: null,
+        liveMarker: null,
+        liveMapFollows: true,
         updateInterval: null,
         permissionsGranted: false,
     };
@@ -48,6 +52,11 @@
         // Initialize trip engine
         await TripEngine.init();
 
+        // Initialize CityPulse infrastructure engine
+        CityPulse.init();
+        CityPulse.on('alert', handleInfraAlert);
+        CityPulse.on('infraEvent', handleInfraEvent);
+
         // Register PWA service worker
         registerServiceWorker();
 
@@ -66,6 +75,8 @@
         initNotificationPanel();
         initProfileModal();
         initPermissionFlow();
+        initInfraFilterChips();
+        initInfraDemoButton();
 
         // Register trip engine callbacks
         TripEngine.on('tripStart', handleTripStarted);
@@ -79,13 +90,42 @@
 
         // Load sensor status
         updateSensorStatusUI();
+
+        // Initialize Live Tracking Map safely so it doesn't block other UI
+        try {
+            initLiveTrackingMap();
+        } catch(e) {
+            console.warn("Failed to initialize Live Tracking Map:", e);
+        }
     }
 
     // ===== SERVICE WORKER =====
     function registerServiceWorker() {
         if ('serviceWorker' in navigator) {
+            // First, clear ALL old caches and unregister old SW to force fresh load
+            caches.keys().then(keys => {
+                keys.forEach(key => {
+                    if (key !== 'drivepulse-v2.0') {
+                        caches.delete(key);
+                        console.log('Cleared old cache:', key);
+                    }
+                });
+            });
+
             navigator.serviceWorker.register('/sw.js').then((reg) => {
                 console.log('SW registered:', reg.scope);
+                // Force the new SW to activate immediately
+                if (reg.waiting) {
+                    reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+                }
+                reg.addEventListener('updatefound', () => {
+                    const newWorker = reg.installing;
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'activated') {
+                            console.log('New SW activated, reloading for fresh content');
+                        }
+                    });
+                });
             }).catch((err) => {
                 console.warn('SW registration failed:', err);
             });
@@ -385,6 +425,23 @@
 
         if (screenName === 'analytics') setTimeout(() => initAnalyticsCharts(), 100);
         if (screenName === 'history') loadAndRenderTrips();
+        if (screenName === 'infra') {
+            setTimeout(async () => {
+                // Auto-load demo data if no infra events exist
+                if (DrivePulse.DemoData && DrivePulse.DemoData.isAvailable) {
+                    try {
+                        const existing = await DB.getAllInfraEvents();
+                        if (existing.length === 0) {
+                            showToast('Loading CityPulse demo data... 🏙️');
+                            await DrivePulse.DemoData.loadDemoData();
+                            showToast('Demo data loaded! 71 events + 45 segments ✅');
+                        }
+                    } catch (e) { console.warn('Demo load check failed:', e); }
+                }
+                renderInfraMap();
+                updateInfraDashboard();
+            }, 300);
+        }
 
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -467,6 +524,9 @@
         showToast('Trip tracking started! 🚗');
         updateNotificationBadge();
 
+        // Start CityPulse infrastructure monitoring
+        CityPulse.start(data.tripId);
+
         // Start live UI updates
         ui.updateInterval = setInterval(updateLiveUI, 500);
     }
@@ -496,6 +556,9 @@
 
         showToast(`Trip completed! Score: ${trip.score}/100 🏁`);
         updateNotificationBadge();
+
+        // Stop CityPulse infrastructure monitoring
+        CityPulse.stop();
 
         // Reload trips
         loadAndRenderTrips();
@@ -542,6 +605,22 @@
     function updateLiveUI() {
         const data = TripEngine.getLiveData();
         if (!data) return;
+
+        // Feed data to CityPulse infrastructure engine
+        if (CityPulse.isActive()) {
+            const accel = DrivePulse.Sensors.getCurrentAcceleration();
+            if (accel) CityPulse.feedAcceleration(accel);
+
+            const pos = DrivePulse.Sensors.getCurrentPosition();
+            const speed = DrivePulse.Sensors.getCurrentSpeed();
+            if (pos) {
+                CityPulse.feedGPS({
+                    latitude: pos.latitude,
+                    longitude: pos.longitude,
+                    speed: speed,
+                });
+            }
+        }
 
         updateSpeedometer(data.speed);
         const distEl = $('#live-distance');
@@ -829,7 +908,100 @@
     }
 
     // ============================================
-    // MAP
+    // LIVE TRACKING MAP
+    // ============================================
+    function initLiveTrackingMap() {
+        const mapEl = $('#live-tracking-map');
+        if (!mapEl) return;
+
+        if (ui.liveMap) {
+            ui.liveMap.remove();
+            ui.liveMap = null;
+        }
+
+        ui.liveMap = new maplibregl.Map({
+            container: 'live-tracking-map',
+            style: {
+                version: 8,
+                sources: {
+                    'carto-dark': {
+                        type: 'raster',
+                        tiles: [
+                            'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+                            'https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+                            'https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+                            'https://d.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'
+                        ],
+                        tileSize: 256
+                    }
+                },
+                layers: [{
+                    id: 'carto-dark-layer', type: 'raster', source: 'carto-dark', minzoom: 0, maxzoom: 22
+                }]
+            },
+            center: [0, 0],
+            zoom: 2,
+            attributionControl: false,
+            dragPan: true
+        });
+
+        const liveIconEl = document.createElement('div');
+        liveIconEl.className = 'custom-live-marker';
+        liveIconEl.innerHTML = `
+            <div style="position: relative; width: 18px; height: 18px;">
+                <div style="position: absolute; width: 100%; height: 100%; top: -9px; left: -9px; border-radius: 50%; background: #00d4ff; opacity: 0.4; animation: livePulse 2s ease-out infinite;"></div>
+                <div style="position: absolute; width: 14px; height: 14px; top: -7px; left: -7px; border-radius: 50%; background: #00d4ff; border: 2px solid white; box-shadow: 0 0 10px rgba(0,212,255,0.8);"></div>
+            </div>
+        `;
+
+        ui.liveMarker = new maplibregl.Marker({ element: liveIconEl })
+            .setLngLat([0, 0])
+            .addTo(ui.liveMap);
+
+        if (navigator.geolocation) {
+            navigator.geolocation.watchPosition(
+                (pos) => {
+                    const lat = pos.coords.latitude;
+                    const lng = pos.coords.longitude;
+                    
+                    if (ui.liveMarker) ui.liveMarker.setLngLat([lng, lat]);
+                    
+                    if (ui.liveMapFollows && ui.liveMap) {
+                        try {
+                            ui.liveMap.flyTo({ center: [lng, lat], zoom: ui.liveMap.getZoom() < 14 ? 16 : ui.liveMap.getZoom() });
+                        } catch (e) {}
+                    }
+                },
+                (err) => console.warn('Live map GPS error:', err),
+                { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
+            );
+        }
+
+        ui.liveMap.on('dragstart', () => { ui.liveMapFollows = false; });
+
+        $('#live-map-zoom-in')?.addEventListener('click', () => {
+             if(ui.liveMap) ui.liveMap.zoomIn();
+        });
+        
+        $('#live-map-zoom-out')?.addEventListener('click', () => {
+             if(ui.liveMap) ui.liveMap.zoomOut();
+        });
+
+        $('#live-map-recenter')?.addEventListener('click', () => {
+             ui.liveMapFollows = true;
+             if(ui.liveMarker && ui.liveMap) {
+                 const center = ui.liveMarker.getLngLat();
+                 if(center.lat !== 0) {
+                     ui.liveMap.flyTo({ center: [center.lng, center.lat], zoom: 16, duration: 500 });
+                 }
+             }
+        });
+
+        setTimeout(() => { if(ui.liveMap) ui.liveMap.resize(); }, 500);
+    }
+
+    // ============================================
+    // TRIP MAP
     // ============================================
     function initTripMap(trip) {
         const mapContainer = $('#trip-map');
@@ -841,7 +1013,7 @@
         }
 
         const route = trip.route || [];
-        const singlePoint = trip.startLocation ? [trip.startLocation.lat, trip.startLocation.lng] : null;
+        const singlePoint = trip.startLocation ? { lat: trip.startLocation.lat, lng: trip.startLocation.lng } : null;
 
         if (route.length < 2 && !singlePoint) {
             mapContainer.innerHTML = '<div class="map-placeholder"><i class="fas fa-map-marked-alt"></i><p>No route data available</p></div>';
@@ -849,46 +1021,77 @@
         }
 
         try {
-            ui.map = L.map(mapContainer, {
-                zoomControl: true,
+            ui.map = new maplibregl.Map({
+                container: 'trip-map',
+                style: {
+                    version: 8,
+                    sources: { 'osm': { type: 'raster', tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], tileSize: 256 } },
+                    layers: [{ id: 'osm-layer', type: 'raster', source: 'osm', minzoom: 0, maxzoom: 19 }]
+                },
+                center: singlePoint ? [singlePoint.lng, singlePoint.lat] : (route.length > 0 ? [route[0].lng, route[0].lat] : [0,0]),
+                zoom: 15,
                 attributionControl: false,
-                scrollWheelZoom: false,
+                scrollZoom: false
             });
 
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 18,
-            }).addTo(ui.map);
+            ui.map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
 
-            const startIcon = L.divIcon({
-                className: 'custom-marker',
-                html: '<div style="width:14px;height:14px;border-radius:50%;background:#00d4ff;border:3px solid white;box-shadow:0 0 10px rgba(0,212,255,0.6);"></div>',
-                iconSize: [14, 14], iconAnchor: [7, 7],
+            const createMarker = (color) => {
+                const el = document.createElement('div');
+                el.className = 'custom-marker';
+                el.innerHTML = `<div style="width:14px;height:14px;border-radius:50%;background:${color};border:3px solid white;box-shadow:0 0 10px ${color};"></div>`;
+                return el;
+            };
+
+            ui.map.on('load', () => {
+                if (route.length >= 2) {
+                    ui.map.addSource('route', {
+                        'type': 'geojson',
+                        'data': {
+                            'type': 'Feature',
+                            'properties': {},
+                            'geometry': {
+                                'type': 'LineString',
+                                'coordinates': route.map(p => [p.lng, p.lat])
+                            }
+                        }
+                    });
+
+                    ui.map.addLayer({
+                        'id': 'route-line-bg',
+                        'type': 'line',
+                        'source': 'route',
+                        'layout': { 'line-join': 'round', 'line-cap': 'round' },
+                        'paint': { 'line-color': '#00d4ff', 'line-width': 4, 'line-opacity': 0.8 }
+                    });
+
+                    ui.map.addLayer({
+                        'id': 'route-line',
+                        'type': 'line',
+                        'source': 'route',
+                        'layout': { 'line-join': 'round', 'line-cap': 'round' },
+                        'paint': { 'line-color': '#7c3aed', 'line-width': 2, 'line-opacity': 0.5 }
+                    });
+
+                    new maplibregl.Marker({ element: createMarker('#00d4ff') })
+                        .setLngLat([route[0].lng, route[0].lat])
+                        .addTo(ui.map);
+
+                    new maplibregl.Marker({ element: createMarker('#ff006e') })
+                        .setLngLat([route[route.length - 1].lng, route[route.length - 1].lat])
+                        .addTo(ui.map);
+
+                    const bounds = new maplibregl.LngLatBounds();
+                    route.forEach(p => bounds.extend([p.lng, p.lat]));
+                    ui.map.fitBounds(bounds, { padding: 40 });
+                } else if (singlePoint) {
+                    new maplibregl.Marker({ element: createMarker('#00d4ff') })
+                        .setLngLat([singlePoint.lng, singlePoint.lat])
+                        .addTo(ui.map);
+                        
+                    ui.map.jumpTo({ center: [singlePoint.lng, singlePoint.lat], zoom: 15 });
+                }
             });
-
-            if (route.length >= 2) {
-                const routeLine = L.polyline(route, {
-                    color: '#00d4ff', weight: 4, opacity: 0.8, smoothFactor: 1,
-                }).addTo(ui.map);
-
-                L.polyline(route, {
-                    color: '#7c3aed', weight: 2, opacity: 0.5, smoothFactor: 1,
-                }).addTo(ui.map);
-
-                const endIcon = L.divIcon({
-                    className: 'custom-marker',
-                    html: '<div style="width:14px;height:14px;border-radius:50%;background:#ff006e;border:3px solid white;box-shadow:0 0 10px rgba(255,0,110,0.6);"></div>',
-                    iconSize: [14, 14], iconAnchor: [7, 7],
-                });
-
-                L.marker(route[0], { icon: startIcon }).addTo(ui.map);
-                L.marker(route[route.length - 1], { icon: endIcon }).addTo(ui.map);
-
-                ui.map.fitBounds(routeLine.getBounds(), { padding: [30, 30] });
-            } else if (singlePoint) {
-                // Tracking without movement
-                L.marker(singlePoint, { icon: startIcon }).addTo(ui.map);
-                ui.map.setView(singlePoint, 15);
-            }
         } catch (e) {
             console.warn('Map error:', e);
         }
@@ -1100,8 +1303,12 @@
             }
         }
 
-        // Distance chart
-        if (!ui.charts.analyticsDist) {
+        // Distance chart - Destroy old instance to prevent canvas memory leak
+        if (ui.charts.analyticsDist) {
+            ui.charts.analyticsDist.destroy();
+            ui.charts.analyticsDist = null;
+        }
+        {
             const distCtx = $('#analytics-distance-chart');
             if (distCtx) {
                 ui.charts.analyticsDist = new Chart(distCtx, {
@@ -1128,8 +1335,12 @@
             }
         }
 
-        // Speed distribution
-        if (!ui.charts.analyticsSpeedDist) {
+        // Speed distribution - destroy old to prevent leak
+        if (ui.charts.analyticsSpeedDist) {
+            ui.charts.analyticsSpeedDist.destroy();
+            ui.charts.analyticsSpeedDist = null;
+        }
+        {
             const speedCtx = $('#analytics-speed-dist');
             if (speedCtx) {
                 const buckets = [0, 0, 0, 0, 0, 0]; // 0-20, 20-40, 40-60, 60-80, 80-100, 100+
@@ -1330,6 +1541,27 @@
                 }
             });
         }
+
+        // About Modal
+        $('#about-btn')?.addEventListener('click', async () => {
+            navigateTo('about');
+            const contentDiv = $('#about-content');
+            if (contentDiv && !contentDiv.innerHTML.includes('about-container')) {
+                try {
+                    contentDiv.innerHTML = '<div style="text-align:center; padding: 40px; color: var(--accent-light);"><i class="fas fa-spinner fa-spin fa-2x"></i><p style="margin-top:16px;">Loading documentation...</p></div>';
+                    const res = await fetch('about-content.html');
+                    if (!res.ok) throw new Error('Failed to load about content');
+                    const html = await res.text();
+                    contentDiv.innerHTML = html;
+                } catch (e) {
+                    contentDiv.innerHTML = '<div style="padding:30px; text-align:center;"><i class="fas fa-exclamation-triangle" style="font-size:2rem; color:var(--danger-color); margin-bottom:12px;"></i><p>Failed to load documentation. Please try again.</p></div>';
+                }
+            }
+        });
+
+        $('#about-back-btn')?.addEventListener('click', () => {
+            navigateTo('settings', false);
+        });
     }
 
     // ============================================
@@ -1436,6 +1668,306 @@
         $('#toast-message').textContent = message;
         toast.classList.add('show');
         setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    // ============================================
+    // CITYPULSE INFRASTRUCTURE UI
+    // ============================================
+    // CityPulse reference is declared at the top of this IIFE
+
+    // Infra alert toast during trips
+    function handleInfraAlert(alert) {
+        let alertEl = $('#infra-alert-toast');
+        if (!alertEl) {
+            alertEl = document.createElement('div');
+            alertEl.id = 'infra-alert-toast';
+            alertEl.className = 'infra-alert';
+            document.body.appendChild(alertEl);
+        }
+        alertEl.textContent = alert.message;
+        alertEl.className = `infra-alert ${alert.type}`;
+        // Show
+        requestAnimationFrame(() => {
+            alertEl.classList.add('show');
+            setTimeout(() => alertEl.classList.remove('show'), 3000);
+        });
+    }
+
+    function handleInfraEvent(event) {
+        // Could do real-time map updates here if infra screen is active
+    }
+
+    // Infrastructure filter chips
+    function initInfraFilterChips() {
+        document.querySelectorAll('.infra-filter-chip').forEach(chip => {
+            chip.addEventListener('click', () => {
+                document.querySelectorAll('.infra-filter-chip').forEach(c => c.classList.remove('active'));
+                chip.classList.add('active');
+                renderInfraMap(chip.dataset.infraFilter);
+            });
+        });
+    }
+
+    // Render infrastructure map with markers
+    async function renderInfraMap(filter = 'all') {
+        const mapEl = $('#infra-map');
+        if (!mapEl) return;
+
+        if (ui.infraMap) {
+            ui.infraMap.remove();
+            ui.infraMap = null;
+        }
+
+        const stats = await CityPulse.getAggregatedStats();
+        const events = stats.allEvents;
+
+        const filtered = filter === 'all' ? events : events.filter(e => e.type === filter);
+        const validEvents = filtered.filter(e => e.lat && e.lng && e.lat !== 0 && e.lng !== 0);
+        
+        let center = [78.9629, 20.5937]; 
+        let zoom = 4;
+
+        if (validEvents.length > 0) {
+            const avgLat = validEvents.reduce((s, e) => s + e.lat, 0) / validEvents.length;
+            const avgLng = validEvents.reduce((s, e) => s + e.lng, 0) / validEvents.length;
+            center = [avgLng, avgLat];
+            zoom = 13;
+        } else {
+            const pos = DrivePulse.Sensors.getCurrentPosition();
+            if (pos) { center = [pos.longitude, pos.latitude]; zoom = 13; }
+        }
+
+        ui.infraMap = new maplibregl.Map({
+            container: 'infra-map',
+            style: {
+                version: 8,
+                sources: {
+                    'carto-dark': {
+                        type: 'raster',
+                        tiles: [
+                            'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+                            'https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+                            'https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+                            'https://d.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'
+                        ],
+                        tileSize: 256
+                    }
+                },
+                layers: [{
+                    id: 'carto-dark-layer', type: 'raster', source: 'carto-dark', minzoom: 0, maxzoom: 22
+                }]
+            },
+            center: center,
+            zoom: zoom,
+            attributionControl: false
+        });
+
+        ui.infraMap.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
+
+        const typeStyles = {
+            pothole: { low: '#fdba74', medium: '#f97316', high: '#c2410c', icon: '⚠️' },
+            road_quality: { low: '#fca5a5', medium: '#ef4444', high: '#b91c1c', icon: '🛣️' },
+            noise: { low: '#d8b4fe', medium: '#a855f7', high: '#7e22ce', icon: '🔊' },
+            traffic: { low: '#fde047', medium: '#eab308', high: '#a16207', icon: '🚦' },
+            dead_zone: { low: '#d1d5db', medium: '#6b7280', high: '#374151', icon: '📵' },
+        };
+
+        const typeLabels = {
+            pothole: 'Pothole',
+            road_quality: 'Poor Road',
+            noise: 'Noise Zone',
+            traffic: 'Traffic',
+            dead_zone: 'Dead Zone',
+        };
+
+        ui.infraMap.on('load', () => {
+            validEvents.forEach(event => {
+                const styleObj = typeStyles[event.type] || { low: '#fff', medium: '#fff', high: '#fff', icon: '📍' };
+                const sevKey = event.severity === 'high' ? 'high' : (event.severity === 'low' ? 'low' : 'medium');
+                const markerColor = styleObj[sevKey];
+
+                const radius = event.severity === 'high' ? 24 : event.severity === 'medium' ? 16 : 10;
+                const opacity = event.severity === 'high' ? 0.8 : event.severity === 'medium' ? 0.6 : 0.4;
+
+                const el = document.createElement('div');
+                el.style.width = radius + 'px';
+                el.style.height = radius + 'px';
+                el.style.borderRadius = '50%';
+                el.style.background = markerColor;
+                el.style.opacity = opacity;
+                el.style.border = `${event.severity === 'high' ? 2 : 1}px solid white`;
+                el.style.boxShadow = `0 0 10px ${markerColor}`;
+                el.style.cursor = 'pointer';
+
+                const popupHtml = `
+                    <div style="font-family:'Inter',sans-serif;font-size:13px;padding:4px;color:#111;">
+                        <strong style="font-size:14px;">${styleObj.icon} ${typeLabels[event.type] || event.type}</strong><br>
+                        Severity: <b style="color:${markerColor};text-transform:capitalize;">${event.severity}</b><br>
+                        <span style="color:#666;font-size:11px;">${new Date(event.timestamp).toLocaleString()}</span>
+                    </div>
+                `;
+
+                const popup = new maplibregl.Popup({ offset: 15, closeButton: false }).setHTML(popupHtml);
+
+                new maplibregl.Marker({ element: el })
+                    .setLngLat([event.lng, event.lat])
+                    .setPopup(popup)
+                    .addTo(ui.infraMap);
+            });
+            setTimeout(() => ui.infraMap.resize(), 300);
+        });
+    }
+
+    // Update infra dashboard with aggregated stats
+    async function updateInfraDashboard() {
+        const stats = await CityPulse.getAggregatedStats();
+
+        // Overview cards
+        const potholeEl = $('#infra-potholes');
+        if (potholeEl) potholeEl.textContent = stats.totalPotholes;
+        const roadScoreEl = $('#infra-road-score');
+        if (roadScoreEl) roadScoreEl.textContent = stats.avgRoadScore + '/100';
+        const noiseEl = $('#infra-noise');
+        if (noiseEl) noiseEl.textContent = stats.noiseZones;
+        const trafficEl = $('#infra-traffic');
+        if (trafficEl) trafficEl.textContent = stats.trafficSlowdowns;
+
+        // Breakdown bars
+        const total = Math.max(stats.totalIssues, 1);
+        const setBar = (id, count) => {
+            const bar = $(`#${id}`);
+            if (bar) bar.style.setProperty('--bar-width', `${Math.min(100, (count / total) * 100)}%`);
+        };
+        setBar('infra-bar-pothole', stats.totalPotholes);
+        setBar('infra-bar-road', stats.poorRoads);
+        setBar('infra-bar-noise', stats.noiseZones);
+        setBar('infra-bar-traffic', stats.trafficSlowdowns);
+        setBar('infra-bar-signal', stats.deadZones);
+
+        // Breakdown counts
+        const setCount = (id, count) => { const el = $(`#${id}`); if (el) el.textContent = count; };
+        setCount('infra-count-pothole', stats.totalPotholes);
+        setCount('infra-count-road', stats.poorRoads);
+        setCount('infra-count-noise', stats.noiseZones);
+        setCount('infra-count-traffic', stats.trafficSlowdowns);
+        setCount('infra-count-signal', stats.deadZones);
+
+        // Community impact
+        const kmEl = $('#infra-km-monitored');
+        if (kmEl) kmEl.textContent = stats.totalKmMonitored + ' km';
+        const issuesEl = $('#infra-total-issues');
+        if (issuesEl) issuesEl.textContent = stats.totalIssues;
+        const healthEl = $('#infra-road-health');
+        if (healthEl) healthEl.textContent = stats.avgRoadScore + '/100';
+
+        // Pothole severity chart
+        initPotholeChart(stats);
+
+        // Recent events list
+        renderInfraEvents(stats.allEvents);
+    }
+
+    function initPotholeChart(stats) {
+        if (ui.charts.infraPothole) ui.charts.infraPothole.destroy();
+        const ctx = $('#infra-pothole-chart');
+        if (!ctx) return;
+
+        ui.charts.infraPothole = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Low Severity', 'Medium Severity', 'High Severity'],
+                datasets: [{
+                    data: [
+                        stats.potholeSeverity.low,
+                        stats.potholeSeverity.medium,
+                        stats.potholeSeverity.high,
+                    ],
+                    backgroundColor: [
+                        'rgba(16,185,129,0.7)',
+                        'rgba(234,179,8,0.7)',
+                        'rgba(239,68,68,0.7)',
+                    ],
+                    borderColor: 'rgba(10,14,26,0.8)',
+                    borderWidth: 3,
+                }],
+            },
+            options: {
+                responsive: true, maintainAspectRatio: true, cutout: '65%',
+                plugins: {
+                    legend: {
+                        display: true, position: 'bottom',
+                        labels: { color: '#94a3b8', font: { family: 'Inter', size: 11 }, padding: 16, usePointStyle: true, pointStyle: 'circle' },
+                    },
+                },
+            },
+        });
+    }
+
+    function renderInfraEvents(events) {
+        const list = $('#infra-events-list');
+        if (!list) return;
+
+        if (events.length === 0) {
+            list.innerHTML = `<div class="empty-state">
+                <i class="fas fa-city"></i>
+                <p>No infrastructure data yet</p>
+                <span>Start a trip to begin collecting road intelligence</span>
+            </div>`;
+            return;
+        }
+
+        const typeConfig = {
+            pothole: { icon: 'fa-circle-exclamation', label: 'Pothole Detected' },
+            road_quality: { icon: 'fa-road', label: 'Poor Road Quality' },
+            noise: { icon: 'fa-volume-high', label: 'Noise Pollution' },
+            traffic: { icon: 'fa-traffic-light', label: 'Traffic Congestion' },
+            dead_zone: { icon: 'fa-signal', label: 'Network Dead Zone' },
+        };
+
+        const sorted = [...events].sort((a, b) => b.timestamp - a.timestamp).slice(0, 20);
+
+        // Sanitize function to prevent XSS from stored data
+        const esc = (str) => String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+        list.innerHTML = sorted.map(event => {
+            const cfg = typeConfig[event.type] || { icon: 'fa-circle', label: event.type };
+            const timeAgo = formatTimeAgo(event.timestamp);
+            return `<div class="infra-event-card">
+                <div class="infra-event-icon ${esc(event.type)}">
+                    <i class="fas ${esc(cfg.icon)}"></i>
+                </div>
+                <div class="infra-event-info">
+                    <span class="infra-event-title">${esc(cfg.label)}</span>
+                    <span class="infra-event-meta">${esc(timeAgo)} • Value: ${esc(event.value)}</span>
+                </div>
+                <span class="infra-event-severity ${esc(event.severity)}">${esc(event.severity)}</span>
+            </div>`;
+        }).join('');
+    }
+
+    // ============================================
+    // DEMO DATA
+    // ============================================
+    function initInfraDemoButton() {
+        const btn = $('#load-demo-infra-btn');
+        if (btn) {
+            btn.addEventListener('click', async () => {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+                try {
+                    const result = await DrivePulse.DemoData.loadDemoData();
+                    showToast(`Demo loaded! ${result.events} events + ${result.segments} segments 🏙️`);
+                    // Refresh the infra dashboard
+                    await renderInfraMap();
+                    await updateInfraDashboard();
+                } catch (e) {
+                    showToast('Failed to load demo data');
+                    console.error(e);
+                }
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-flask"></i> Load Demo Data for Preview';
+            });
+        }
     }
 
     // ============================================

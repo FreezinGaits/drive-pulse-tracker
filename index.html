@@ -8,6 +8,8 @@
   <meta name="description"
     content="DrivePulse converts everyday driving trips into detailed driving analytics. Track speed, acceleration, braking, and cornering with smartphone sensors.">
   <meta name="theme-color" content="#0a0e1a">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self' https://unpkg.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com https://cdnjs.cloudflare.com; font-src https://fonts.gstatic.com https://cdnjs.cloudflare.com https://*.basemaps.cartocdn.com; img-src 'self' data: blob: https://*.basemaps.cartocdn.com https://*.tile.openstreetmap.org; connect-src 'self' https://nominatim.openstreetmap.org https://basemaps.cartocdn.com https://*.basemaps.cartocdn.com; worker-src 'self' blob:; child-src blob:;">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="mobile-web-app-capable" content="yes">
@@ -17,7 +19,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
   <link rel="stylesheet" href="css/styles.css">
 </head>
@@ -78,6 +80,13 @@
           <div>
             <span class="perm-title">Notifications</span>
             <span class="perm-desc">Trip start/end alerts</span>
+          </div>
+        </div>
+        <div class="permission-item">
+          <i class="fas fa-microphone"></i>
+          <div>
+            <span class="perm-title">Microphone</span>
+            <span class="perm-desc">CityPulse noise level detection</span>
           </div>
         </div>
       </div>
@@ -209,6 +218,36 @@
               <span class="live-stat-value" id="live-gforce">0.0</span>
               <span class="live-stat-label">G-force</span>
             </div>
+          </div>
+        </div>
+
+        <!-- Live Offline Tracking Map -->
+        <div class="live-map-card glass-card" id="live-map-container"
+          style="margin-top: 24px; padding: 4px; height: 350px; position: relative; border-radius: 16px; overflow: hidden;">
+          <div id="live-tracking-map"
+            style="width: 100%; height: 100%; border-radius: 12px; background: #0a0e1a; position: relative; z-index: 1;">
+          </div>
+
+          <div
+            style="position: absolute; top: 12px; left: 12px; z-index: 10; background: rgba(10, 14, 26, 0.85); padding: 8px 14px; border-radius: 20px; border: 1px solid rgba(0, 212, 255, 0.3); backdrop-filter: blur(10px); display: flex; align-items: center; gap: 8px; pointer-events: none;">
+            <div
+              style="width: 8px; height: 8px; border-radius: 50%; background: #00d4ff; box-shadow: 0 0 8px #00d4ff; animation: pulse 2s infinite;">
+            </div>
+            <span style="color: white; font-size: 0.8rem; font-weight: 600; font-family: var(--font-display);">Live
+              Tracking Offline-Ready</span>
+          </div>
+
+          <div
+            style="position: absolute; bottom: 16px; right: 16px; z-index: 10; display: flex; flex-direction: column; gap: 10px;">
+            <button id="live-map-zoom-in"
+              style="width: 44px; height: 44px; border-radius: 50%; background: rgba(10, 14, 26, 0.9); border: 1px solid rgba(255,255,255,0.1); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px); box-shadow: 0 4px 12px rgba(0,0,0,0.5); font-size: 1.1rem; transition: transform 0.2s;"><i
+                class="fas fa-plus"></i></button>
+            <button id="live-map-zoom-out"
+              style="width: 44px; height: 44px; border-radius: 50%; background: rgba(10, 14, 26, 0.9); border: 1px solid rgba(255,255,255,0.1); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px); box-shadow: 0 4px 12px rgba(0,0,0,0.5); font-size: 1.1rem; transition: transform 0.2s;"><i
+                class="fas fa-minus"></i></button>
+            <button id="live-map-recenter"
+              style="width: 44px; height: 44px; border-radius: 50%; background: var(--accent-cyan); border: none; color: #0a0e1a; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,212,255,0.4); margin-top: 8px; font-size: 1.2rem; transition: transform 0.2s;"><i
+                class="fas fa-location-crosshairs"></i></button>
           </div>
         </div>
 
@@ -566,6 +605,18 @@
             <span class="sensor-name">Magnetometer</span>
             <span class="sensor-status-indicator" data-sensor="orientation">Inactive</span>
           </div>
+          <div class="sensor-card glass-card">
+            <div class="sensor-icon" style="background:rgba(168,85,247,0.15);color:#a855f7;"><i
+                class="fas fa-microphone"></i></div>
+            <span class="sensor-name">Microphone</span>
+            <span class="sensor-status-indicator" data-sensor="microphone">CityPulse</span>
+          </div>
+          <div class="sensor-card glass-card">
+            <div class="sensor-icon" style="background:rgba(107,114,128,0.15);color:#6b7280;"><i
+                class="fas fa-signal"></i></div>
+            <span class="sensor-name">Network</span>
+            <span class="sensor-status-indicator" data-sensor="network">CityPulse</span>
+          </div>
         </div>
       </div>
     </section>
@@ -590,15 +641,19 @@
         <!-- Sensor Control -->
         <div class="settings-group">
           <h3 class="settings-group-title">Sensors</h3>
-          <div class="setting-item glass-card" style="display:flex;align-items:center;justify-content:space-between;">
-            <div class="setting-info" style="margin-bottom:0;">
-              <i class="fas fa-satellite-dish"></i>
-              <div>
+          <div class="setting-item glass-card"
+            style="display:flex; align-items:center; justify-content:space-between; gap: 15px;">
+            <div class="setting-info" style="margin-bottom:0; flex-grow: 1; min-width: 0;">
+              <i class="fas fa-satellite-dish" style="flex-shrink: 0;"></i>
+              <div style="min-width: 0;">
                 <span class="setting-label">Enable Sensors</span>
-                <span class="setting-desc">GPS, Accelerometer, Gyroscope</span>
+                <span class="setting-desc"
+                  style="display:block; white-space:normal; line-height:1.4; overflow-wrap:break-word;">GPS,
+                  Accelerometer, Gyroscope</span>
               </div>
             </div>
-            <button class="permission-btn primary small" id="enable-sensors-btn">
+            <button class="permission-btn primary small" id="enable-sensors-btn"
+              style="flex-shrink: 0; white-space: nowrap;">
               <i class="fas fa-power-off"></i> Activate
             </button>
           </div>
@@ -764,14 +819,226 @@
 
         <div class="settings-group">
           <h3 class="settings-group-title">About</h3>
-          <div class="setting-item glass-card" style="display:flex;align-items:center;justify-content:space-between;">
+          <div class="setting-item glass-card" id="about-btn"
+            style="display:flex;align-items:center;justify-content:space-between; cursor:pointer;">
             <div class="setting-info" style="margin-bottom:0;">
               <i class="fas fa-info-circle"></i>
               <div>
                 <span class="setting-label">DrivePulse</span>
-                <span class="setting-desc">v1.0.0 • Smart Trip Tracker</span>
+                <span class="setting-desc">v2.0.0 • Smart Trip Tracker + CityPulse</span>
               </div>
             </div>
+            <i class="fas fa-chevron-right" style="color:#64748b;"></i>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== ABOUT SCREEN ===== -->
+    <section id="screen-about" class="screen page-screen">
+      <div class="page-content" style="padding-bottom: 120px;">
+        <div class="greeting-section" style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px;">
+          <button class="icon-btn back-btn" id="about-back-btn"
+            style="border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 50%; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: rgba(0, 212, 255, 0.05); color: white; cursor: pointer; transition: all 0.3s ease;"><i
+              class="fas fa-arrow-left"></i></button>
+          <div>
+            <h1 style="margin: 0; font-size: 1.8rem; font-weight: 800;">About <span class="accent">DrivePulse</span>
+            </h1>
+            <p class="greeting-sub" style="margin: 0;">Documentation & Architecture</p>
+          </div>
+        </div>
+
+        <div id="about-content" class="markdown-body glass-card" style="padding: 24px; border-radius: 16px;">
+          <!-- Markdown content will be dynamically injected here via Marked -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== CITYPULSE INFRASTRUCTURE SCREEN ===== -->
+    <section id="screen-infra" class="screen page-screen">
+      <div class="page-content">
+        <div class="greeting-section">
+          <h1>City<span class="accent">Pulse</span></h1>
+          <p class="greeting-sub">Infrastructure Intelligence Network</p>
+        </div>
+
+        <!-- Infrastructure Overview Cards -->
+        <div class="quick-stats-grid">
+          <div class="stat-card glass-card" data-color="orange">
+            <div class="stat-card-icon"><i class="fas fa-circle-exclamation"></i></div>
+            <div class="stat-card-info">
+              <span class="stat-card-value" id="infra-potholes">0</span>
+              <span class="stat-card-label">Potholes</span>
+            </div>
+          </div>
+          <div class="stat-card glass-card" data-color="cyan">
+            <div class="stat-card-icon"><i class="fas fa-road"></i></div>
+            <div class="stat-card-info">
+              <span class="stat-card-value" id="infra-road-score">--</span>
+              <span class="stat-card-label">Road Score</span>
+            </div>
+          </div>
+          <div class="stat-card glass-card" data-color="pink">
+            <div class="stat-card-icon"><i class="fas fa-volume-high"></i></div>
+            <div class="stat-card-info">
+              <span class="stat-card-value" id="infra-noise">0</span>
+              <span class="stat-card-label">Noise Zones</span>
+            </div>
+          </div>
+          <div class="stat-card glass-card" data-color="green">
+            <div class="stat-card-icon"><i class="fas fa-traffic-light"></i></div>
+            <div class="stat-card-info">
+              <span class="stat-card-value" id="infra-traffic">0</span>
+              <span class="stat-card-label">Congestion</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Infrastructure Map -->
+        <div class="section-header">
+          <h2>Infrastructure Map</h2>
+          <span class="section-badge">Live Data</span>
+        </div>
+        <div class="infra-map-container glass-card">
+          <div class="infra-map-filters">
+            <button class="infra-filter-chip active" data-infra-filter="all"><i class="fas fa-layer-group"></i>
+              All</button>
+            <button class="infra-filter-chip" data-infra-filter="pothole"><i class="fas fa-circle-exclamation"></i>
+              Potholes</button>
+            <button class="infra-filter-chip" data-infra-filter="road_quality"><i class="fas fa-road"></i>
+              Roads</button>
+            <button class="infra-filter-chip" data-infra-filter="noise"><i class="fas fa-volume-high"></i>
+              Noise</button>
+            <button class="infra-filter-chip" data-infra-filter="traffic"><i class="fas fa-traffic-light"></i>
+              Traffic</button>
+            <button class="infra-filter-chip" data-infra-filter="dead_zone"><i class="fas fa-signal"></i>
+              Signal</button>
+          </div>
+          <div id="infra-map" class="infra-map"></div>
+        </div>
+
+        <!-- Detection Breakdown -->
+        <div class="section-header">
+          <h2>Detection Breakdown</h2>
+        </div>
+        <div class="infra-breakdown glass-card">
+          <div class="infra-breakdown-item">
+            <div class="infra-breakdown-icon" style="background:rgba(249,115,22,0.15);color:#f97316;">
+              <i class="fas fa-circle-exclamation"></i>
+            </div>
+            <div class="infra-breakdown-info">
+              <span class="infra-breakdown-label">Potholes Detected</span>
+              <div class="infra-breakdown-bar-container">
+                <div class="infra-breakdown-bar" id="infra-bar-pothole" style="--bar-width:0%;--bar-color:#f97316;">
+                </div>
+              </div>
+            </div>
+            <span class="infra-breakdown-count" id="infra-count-pothole">0</span>
+          </div>
+          <div class="infra-breakdown-item">
+            <div class="infra-breakdown-icon" style="background:rgba(239,68,68,0.15);color:#ef4444;">
+              <i class="fas fa-road"></i>
+            </div>
+            <div class="infra-breakdown-info">
+              <span class="infra-breakdown-label">Poor Road Segments</span>
+              <div class="infra-breakdown-bar-container">
+                <div class="infra-breakdown-bar" id="infra-bar-road" style="--bar-width:0%;--bar-color:#ef4444;"></div>
+              </div>
+            </div>
+            <span class="infra-breakdown-count" id="infra-count-road">0</span>
+          </div>
+          <div class="infra-breakdown-item">
+            <div class="infra-breakdown-icon" style="background:rgba(168,85,247,0.15);color:#a855f7;">
+              <i class="fas fa-volume-high"></i>
+            </div>
+            <div class="infra-breakdown-info">
+              <span class="infra-breakdown-label">Noise Pollution Zones</span>
+              <div class="infra-breakdown-bar-container">
+                <div class="infra-breakdown-bar" id="infra-bar-noise" style="--bar-width:0%;--bar-color:#a855f7;"></div>
+              </div>
+            </div>
+            <span class="infra-breakdown-count" id="infra-count-noise">0</span>
+          </div>
+          <div class="infra-breakdown-item">
+            <div class="infra-breakdown-icon" style="background:rgba(234,179,8,0.15);color:#eab308;">
+              <i class="fas fa-traffic-light"></i>
+            </div>
+            <div class="infra-breakdown-info">
+              <span class="infra-breakdown-label">Traffic Congestion</span>
+              <div class="infra-breakdown-bar-container">
+                <div class="infra-breakdown-bar" id="infra-bar-traffic" style="--bar-width:0%;--bar-color:#eab308;">
+                </div>
+              </div>
+            </div>
+            <span class="infra-breakdown-count" id="infra-count-traffic">0</span>
+          </div>
+          <div class="infra-breakdown-item">
+            <div class="infra-breakdown-icon" style="background:rgba(107,114,128,0.15);color:#6b7280;">
+              <i class="fas fa-signal"></i>
+            </div>
+            <div class="infra-breakdown-info">
+              <span class="infra-breakdown-label">Network Dead Zones</span>
+              <div class="infra-breakdown-bar-container">
+                <div class="infra-breakdown-bar" id="infra-bar-signal" style="--bar-width:0%;--bar-color:#6b7280;">
+                </div>
+              </div>
+            </div>
+            <span class="infra-breakdown-count" id="infra-count-signal">0</span>
+          </div>
+        </div>
+
+        <!-- Community Impact -->
+        <div class="section-header">
+          <h2>Community Impact</h2>
+          <span class="section-badge">Your Contribution</span>
+        </div>
+        <div class="analytics-overview glass-card">
+          <div class="ao-stat">
+            <div class="ao-icon" style="background:rgba(0,212,255,0.15);color:#00d4ff;"><i class="fas fa-road"></i>
+            </div>
+            <div class="ao-info">
+              <span class="ao-value" id="infra-km-monitored">0 km</span>
+              <span class="ao-label">Roads Monitored</span>
+            </div>
+          </div>
+          <div class="ao-stat">
+            <div class="ao-icon" style="background:rgba(249,115,22,0.15);color:#f97316;"><i class="fas fa-bug"></i>
+            </div>
+            <div class="ao-info">
+              <span class="ao-value" id="infra-total-issues">0</span>
+              <span class="ao-label">Issues Found</span>
+            </div>
+          </div>
+          <div class="ao-stat">
+            <div class="ao-icon" style="background:rgba(16,185,129,0.15);color:#10b981;"><i
+                class="fas fa-shield-halved"></i></div>
+            <div class="ao-info">
+              <span class="ao-value" id="infra-road-health">--</span>
+              <span class="ao-label">Road Health</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pothole Severity Distribution -->
+        <div class="section-header">
+          <h2>Pothole Severity</h2>
+        </div>
+        <div class="chart-card glass-card">
+          <canvas id="infra-pothole-chart" height="200"></canvas>
+        </div>
+
+        <!-- Recent Infra Events -->
+        <div class="section-header">
+          <h2>Recent Detections</h2>
+        </div>
+        <div class="infra-events-list" id="infra-events-list">
+          <div class="empty-state">
+            <i class="fas fa-city"></i>
+            <p>No infrastructure data yet</p>
+            <span>Start a trip to begin collecting road intelligence</span>
+            <button class="share-btn" id="load-demo-infra-btn" style="margin-top:14px;font-size:0.8rem;">
+              <i class="fas fa-flask"></i> Load Demo Data for Preview
+            </button>
           </div>
         </div>
       </div>
@@ -786,6 +1053,10 @@
       <button class="nav-item" data-screen="history" id="nav-history">
         <i class="fas fa-clock-rotate-left"></i>
         <span>History</span>
+      </button>
+      <button class="nav-item" data-screen="infra" id="nav-infra">
+        <i class="fas fa-city"></i>
+        <span>Infra</span>
       </button>
       <button class="nav-item" data-screen="analytics" id="nav-analytics">
         <i class="fas fa-chart-line"></i>
@@ -885,12 +1156,15 @@
   </div>
 
   <!-- Scripts -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script src="js/db.js"></script>
   <script src="js/sensors.js"></script>
   <script src="js/tripEngine.js"></script>
+  <script src="js/cityPulse.js"></script>
+  <script src="js/demoData.js"></script>
   <script src="js/data.js"></script>
   <script src="js/app.js"></script>
 </body>

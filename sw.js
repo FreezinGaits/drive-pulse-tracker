@@ -4,14 +4,17 @@
    and background keep-alive.
    ============================================ */
 
-const CACHE_NAME = 'drivepulse-v1.0';
+const CACHE_NAME = 'drivepulse-v3.0';
 const ASSETS = [
     '/',
     '/index.html',
+    '/about-content.html',
     '/css/styles.css',
     '/js/db.js',
     '/js/sensors.js',
     '/js/tripEngine.js',
+    '/js/cityPulse.js',
+    '/js/demoData.js',
     '/js/data.js',
     '/js/app.js',
     '/manifest.json',
@@ -48,14 +51,25 @@ self.addEventListener('fetch', (event) => {
     // Skip non-GET requests
     if (event.request.method !== 'GET') return;
 
-    // For map tiles and CDN resources, use network-first
+    // For map tiles and CDN resources, use stale-while-revalidate to ensure offline readiness
     const url = new URL(event.request.url);
     if (url.hostname.includes('tile.openstreetmap') ||
+        url.hostname.includes('basemaps.cartocdn') ||
         url.hostname.includes('unpkg.com') ||
         url.hostname.includes('cdn.jsdelivr.net') ||
         url.hostname.includes('cdnjs.cloudflare.com')) {
         event.respondWith(
-            fetch(event.request).catch(() => caches.match(event.request))
+            caches.match(event.request).then((cachedResponse) => {
+                const fetchPromise = fetch(event.request).then((networkResponse) => {
+                    if (networkResponse && networkResponse.status === 200 && (networkResponse.type === 'basic' || networkResponse.type === 'cors')) {
+                        const clone = networkResponse.clone();
+                        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+                    }
+                    return networkResponse;
+                }).catch(() => {}); // If network fails, silently fail to allow offline display
+                
+                return cachedResponse || fetchPromise;
+            })
         );
         return;
     }

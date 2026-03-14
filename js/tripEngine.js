@@ -193,6 +193,11 @@ DrivePulse.TripEngine = (function () {
                 timestamp: Date.now(),
             });
 
+            // Cap speed readings to last 3600 entries (~1 hour at 1/sec) to prevent memory leak on long trips
+            if (engineState.speedReadings.length > 3600) {
+                engineState.speedReadings = engineState.speedReadings.slice(-3600);
+            }
+
             // Update max speed
             if (speed > engineState.maxSpeed) {
                 engineState.maxSpeed = speed;
@@ -278,26 +283,29 @@ DrivePulse.TripEngine = (function () {
             engineState.maxGForce = gForce;
         }
 
-        // Forward acceleration detection (Y-axis usually when phone is mounted vertically)
-        // We use magnitude along the primary movement axis
-        const forwardAccel = Math.abs(data.y);
-        const forwardG = forwardAccel / 9.81;
+        // EDGE CASE FIX: The "Horizontal Mount" failure
+        // The old code hardcoded data.y for braking, which only works if the phone is perfectly upright.
+        // We now use pure 3D magnitude, and cross-reference with GPS speed vectors to deduce the direction of the force.
+        const totalAccelG = data.magnitude / 9.81;
 
-        // Detect acceleration event
-        if (data.y > 0 && forwardG >= settings.accelThreshold) {
-            if (now - engineState.lastEventTime.accel > settings.eventCooldown) {
-                engineState.accelerationEvents++;
-                engineState.lastEventTime.accel = now;
-                recordEvent('acceleration', forwardG);
-            }
-        }
-
-        // Detect braking event
-        if (data.y < 0 && forwardG >= settings.brakeThreshold) {
-            if (now - engineState.lastEventTime.brake > settings.eventCooldown) {
-                engineState.brakingEvents++;
-                engineState.lastEventTime.brake = now;
-                recordEvent('braking', forwardG);
+        if (totalAccelG >= settings.accelThreshold) {
+            // Check speed trend over the last 2 seconds to see if this force was speeding up or slowing down
+            const recentSpeeds = engineState.speedReadings.slice(-3);
+            const prevSpeed = recentSpeeds.length > 0 ? recentSpeeds[0].speed : Sensors.getCurrentSpeed();
+            const currentSpeed = Sensors.getCurrentSpeed();
+            
+            if (currentSpeed > prevSpeed + 1) { // Speed increasing -> Hard Acceleration
+                if (now - engineState.lastEventTime.accel > settings.eventCooldown) {
+                    engineState.accelerationEvents++;
+                    engineState.lastEventTime.accel = now;
+                    recordEvent('acceleration', totalAccelG);
+                }
+            } else if (currentSpeed < prevSpeed - 1 && totalAccelG >= settings.brakeThreshold) { // Speed decreasing -> Hard Braking
+                if (now - engineState.lastEventTime.brake > settings.eventCooldown) {
+                    engineState.brakingEvents++;
+                    engineState.lastEventTime.brake = now;
+                    recordEvent('braking', totalAccelG);
+                }
             }
         }
     }
