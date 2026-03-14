@@ -573,9 +573,9 @@
 
     function handleEventDetected(event) {
         const typeNames = {
-            acceleration: '⚡ Hard Acceleration',
+            acceleration: '🚀 Hard Acceleration',
             braking: '🛑 Hard Braking',
-            cornering: '↪️ Sharp Corner',
+            cornering: '🔀 Sharp Corner',
             turn_left: '↩️ Hard Left Turn',
             turn_right: '↪️ Hard Right Turn',
         };
@@ -586,6 +586,22 @@
             indicator.textContent = name;
             indicator.classList.add('show');
             setTimeout(() => indicator.classList.remove('show'), 2000);
+        }
+    }
+
+    function handleInfraAlert(alert) {
+        showToast(`⚠️ CityPulse Alert: ${alert.title}`);
+    }
+
+    async function handleInfraEvent(event) {
+        // Re-fetch all active infra events and update MapLibre GeoJSON data source
+        if (typeof MapLayers !== 'undefined' && typeof CityPulse !== 'undefined') {
+            try {
+                const stats = await CityPulse.getAggregatedStats();
+                if (stats && stats.allEvents) {
+                    MapLayers.updateInfraData(stats.allEvents);
+                }
+            } catch(e) {}
         }
     }
 
@@ -1878,6 +1894,20 @@
                     // Refresh the infra dashboard
                     await renderInfraMap();
                     await updateInfraDashboard();
+                    
+                    // Force the live tracking map to also display the new demo events if active
+                    if (typeof MapLayers !== 'undefined') {
+                        try {
+                            const stats = await CityPulse.getAggregatedStats();
+                            if (stats && stats.allEvents) {
+                                MapLayers.updateInfraData(stats.allEvents);
+                                // Fly map to Ludhiana where demo data is generated
+                                if (MapEngine && MapEngine.maps.live) {
+                                    MapEngine.maps.live.flyTo({ center: [75.8530, 30.9030], zoom: 13, duration: 2500 });
+                                }
+                            }
+                        } catch(e) {}
+                    }
                 } catch (e) {
                     showToast('Failed to load demo data');
                     console.error(e);

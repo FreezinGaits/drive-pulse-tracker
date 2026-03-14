@@ -136,13 +136,36 @@ const MapEngine = {
 
         this.maps.live = map;
 
-        map.on('load', () => {
+        map.on('load', async () => {
             MapLayers.initAllLayers(map);
-            // Load CityPulse data asynchronously
+            
+            // Collect all historical events from previous trips
+            let allEvents = [];
+            try {
+                if (typeof DrivePulse !== 'undefined' && DrivePulse.DB) {
+                    const trips = await DrivePulse.DB.getAllTrips();
+                    trips.forEach(t => {
+                        if (t.events && Array.isArray(t.events)) {
+                            allEvents = allEvents.concat(t.events);
+                        }
+                    });
+                }
+            } catch(e) { console.warn('Coult not load historical DB events', e); }
+
+            // Add any live events from current active tracking session
             if (typeof CityPulse !== 'undefined') {
                 CityPulse.getAggregatedStats().then(stats => {
-                    if (stats && stats.allEvents) MapLayers.updateInfraData(stats.allEvents);
-                }).catch(() => {});
+                    if (stats && stats.allEvents) {
+                        allEvents = allEvents.concat(stats.allEvents);
+                    }
+                    if (allEvents.length > 0) {
+                        MapLayers.updateInfraData(allEvents);
+                    }
+                }).catch(() => {
+                    if (allEvents.length > 0) MapLayers.updateInfraData(allEvents);
+                });
+            } else if (allEvents.length > 0) {
+                MapLayers.updateInfraData(allEvents);
             }
         });
 
