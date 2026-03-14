@@ -4,7 +4,7 @@
    and background keep-alive.
    ============================================ */
 
-const CACHE_NAME = 'drivepulse-v3.0';
+const CACHE_NAME = 'drivepulse-v3.2';
 const ASSETS = [
     '/',
     '/index.html',
@@ -16,6 +16,10 @@ const ASSETS = [
     '/js/cityPulse.js',
     '/js/demoData.js',
     '/js/data.js',
+    '/js/tileManager.js',
+    '/js/mapLayers.js',
+    '/js/mapControls.js',
+    '/js/mapEngine.js',
     '/js/app.js',
     '/manifest.json',
     'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800&display=swap',
@@ -55,6 +59,8 @@ self.addEventListener('fetch', (event) => {
     const url = new URL(event.request.url);
     if (url.hostname.includes('tile.openstreetmap') ||
         url.hostname.includes('basemaps.cartocdn') ||
+        url.hostname.includes('tile.opentopomap') ||
+        url.hostname.includes('arcgisonline.com') ||
         url.hostname.includes('unpkg.com') ||
         url.hostname.includes('cdn.jsdelivr.net') ||
         url.hostname.includes('cdnjs.cloudflare.com')) {
@@ -66,7 +72,10 @@ self.addEventListener('fetch', (event) => {
                         caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
                     }
                     return networkResponse;
-                }).catch(() => {}); // If network fails, silently fail to allow offline display
+                }).catch((err) => {
+                    if (cachedResponse) return cachedResponse;
+                    throw err; // Crucial: Let MapLibre know the fetch failed or was aborted!
+                });
                 
                 return cachedResponse || fetchPromise;
             })

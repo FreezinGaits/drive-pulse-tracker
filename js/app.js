@@ -910,28 +910,11 @@
     // ============================================
     // LIVE TRACKING MAP
     // ============================================
-    function initLiveTrackingMap() {
+    async function initLiveTrackingMap() {
         if (!$('#live-tracking-map')) return;
-
-        MapEngine.initLiveMap('live-tracking-map');
-
-        if (navigator.geolocation) {
-            navigator.geolocation.watchPosition(
-                (pos) => {
-                    const lat = pos.coords.latitude;
-                    const lng = pos.coords.longitude;
-                    const heading = pos.coords.heading; // Device orientation
-                    
-                    if (window.MapLayers) {
-                        MapLayers.updateVehiclePosition(lng, lat, heading);
-                    }
-                },
-                (err) => console.warn('Live map GPS error:', err),
-                { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
-            );
-        }
-
-        setTimeout(() => { if (ui.maps && ui.maps.live) ui.maps.live.resize(); }, 500);
+        // MapEngine handles everything: GPS acquisition, map creation,
+        // marker, tracking, controls, layers.
+        await MapEngine.initLiveMap('live-tracking-map');
     }
 
     // ============================================
@@ -959,7 +942,7 @@
                 container: 'trip-map',
                 style: MapEngine ? MapEngine.themes[MapEngine.currentTheme] : {
                     version: 8,
-                    sources: { 'osm': { type: 'raster', tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], tileSize: 256 } },
+                    sources: { 'osm': { type: 'raster', tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], tileSize: 256, maxzoom: 19 } },
                     layers: [{ id: 'osm-layer', type: 'raster', source: 'osm', minzoom: 0, maxzoom: 19 }]
                 },
                 center: singlePoint ? [singlePoint.lng, singlePoint.lat] : (route.length > 0 ? [route[0].lng, route[0].lat] : [0,0]),
@@ -1684,7 +1667,8 @@
                             'https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
                             'https://d.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'
                         ],
-                        tileSize: 256
+                        tileSize: 256,
+                        maxzoom: 19
                     }
                 },
                 layers: [{
