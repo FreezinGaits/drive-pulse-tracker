@@ -46,16 +46,22 @@ const MapControls = {
                 <div class="dp-layer-toggle" data-layer="buildings"><i class="fas fa-building"></i> 3D Buildings</div>
             </div>
 
-            <!-- Buttons -->
-            <button id="dp-btn-theme"  class="dp-ctrl-btn" title="Map Themes"><i class="fas fa-layer-group"></i></button>
-            <button id="dp-btn-mode"   class="dp-ctrl-btn" title="Map Modes"><i class="fas fa-sliders-h"></i></button>
-            <button id="dp-btn-layers" class="dp-ctrl-btn" title="Data Layers"><i class="fas fa-database"></i></button>
-            <button id="dp-btn-3d"     class="dp-ctrl-btn" title="3D Buildings"><i class="fas fa-cube"></i></button>
-            <button id="dp-btn-compass" class="dp-ctrl-btn" title="Reset North"><i class="fas fa-compass"></i></button>
-            <button id="dp-btn-zoomin" class="dp-ctrl-btn" title="Zoom In"><i class="fas fa-plus"></i></button>
-            <button id="dp-btn-zoomout" class="dp-ctrl-btn" title="Zoom Out"><i class="fas fa-minus"></i></button>
-            <button id="dp-btn-offline" class="dp-ctrl-btn dp-accent" title="Cache Region"><i class="fas fa-download"></i></button>
-            <button id="dp-btn-gps"    class="dp-ctrl-btn dp-gps" title="Recenter GPS"><i class="fas fa-location-crosshairs"></i></button>
+            <!-- Top Right Controls (Theme, Mode, Layers, 3D) -->
+            <div class="dp-ctrl-group dp-top-right">
+                <button id="dp-btn-theme"  class="dp-ctrl-btn" title="Map Themes"><i class="fas fa-layer-group"></i></button>
+                <button id="dp-btn-mode"   class="dp-ctrl-btn" title="Map Modes"><i class="fas fa-sliders-h"></i></button>
+                <button id="dp-btn-layers" class="dp-ctrl-btn" title="Data Layers"><i class="fas fa-database"></i></button>
+                <button id="dp-btn-3d"     class="dp-ctrl-btn" title="3D Buildings"><i class="fas fa-cube"></i></button>
+            </div>
+
+            <!-- Bottom Right Controls (Zoom, Compass, Offline, GPS) -->
+            <div class="dp-ctrl-group dp-bottom-right">
+                <button id="dp-btn-compass" class="dp-ctrl-btn" title="Reset North"><i class="fas fa-compass"></i></button>
+                <button id="dp-btn-zoomin" class="dp-ctrl-btn" title="Zoom In"><i class="fas fa-plus"></i></button>
+                <button id="dp-btn-zoomout" class="dp-ctrl-btn" title="Zoom Out"><i class="fas fa-minus"></i></button>
+                <button id="dp-btn-offline" class="dp-ctrl-btn dp-accent" title="Cache Region"><i class="fas fa-download"></i></button>
+                <button id="dp-btn-gps"    class="dp-ctrl-btn dp-gps" title="Recenter GPS"><i class="fas fa-location-crosshairs"></i></button>
+            </div>
         `;
 
         container.appendChild(wrap);
