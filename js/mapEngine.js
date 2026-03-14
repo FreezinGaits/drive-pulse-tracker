@@ -17,6 +17,7 @@ const MapEngine = {
         dark: {
             version: 8,
             name: 'Dark Matter',
+            glyphs: 'https://tiles.basemaps.cartocdn.com/fonts/{fontstack}/{range}.pbf',
             sources: {
                 'basemap': {
                     type: 'raster',
@@ -34,6 +35,7 @@ const MapEngine = {
         standard: {
             version: 8,
             name: 'Standard',
+            glyphs: 'https://tiles.basemaps.cartocdn.com/fonts/{fontstack}/{range}.pbf',
             sources: {
                 'basemap': {
                     type: 'raster',
@@ -51,6 +53,7 @@ const MapEngine = {
         satellite: {
             version: 8,
             name: 'Satellite',
+            glyphs: 'https://tiles.basemaps.cartocdn.com/fonts/{fontstack}/{range}.pbf',
             sources: {
                 'basemap': {
                     type: 'raster',
@@ -66,6 +69,7 @@ const MapEngine = {
         terrain: {
             version: 8,
             name: 'Terrain',
+            glyphs: 'https://tiles.basemaps.cartocdn.com/fonts/{fontstack}/{range}.pbf',
             sources: {
                 'basemap': {
                     type: 'raster',
@@ -82,6 +86,7 @@ const MapEngine = {
         minimal: {
             version: 8,
             name: 'Minimal Nav',
+            glyphs: 'https://tiles.basemaps.cartocdn.com/fonts/{fontstack}/{range}.pbf',
             sources: {
                 'basemap': {
                     type: 'raster',
