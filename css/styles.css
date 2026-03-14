@@ -3082,24 +3082,34 @@ body::before {
 }
 .dp-ctrl-btn.dp-gps:hover { box-shadow: 0 4px 24px rgba(0,212,255,0.5); }
 
-/* ── Theme / Layer menus ── */
-.dp-theme-menu {
+/* ── Dropdown menus ── */
+.dp-dropdown-menu {
     position: absolute;
     right: 54px; bottom: 0;
     display: none;
     flex-direction: column;
     gap: 2px;
     padding: 8px;
-    min-width: 140px;
+    min-width: 160px;
     background: rgba(10, 14, 26, 0.95);
     border: 1px solid rgba(255,255,255,0.08);
     border-radius: 12px;
     backdrop-filter: blur(16px);
     box-shadow: 0 8px 30px rgba(0,0,0,0.6);
 }
-.dp-theme-menu.open { display: flex; }
+.dp-dropdown-menu.open { display: flex; }
 
-.dp-theme-opt, .dp-layer-toggle {
+.dp-menu-title {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 4px 14px 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    margin-bottom: 4px;
+}
+
+.dp-theme-opt, .dp-mode-opt, .dp-layer-toggle {
     padding: 9px 14px;
     border-radius: 8px;
     color: #cbd5e1;
@@ -3109,10 +3119,9 @@ body::before {
     transition: all 0.15s ease;
     display: flex; align-items: center; gap: 8px;
 }
-.dp-theme-opt:hover, .dp-layer-toggle:hover { background: rgba(255,255,255,0.08); }
-.dp-theme-opt.active { color: #00d4ff; background: rgba(0,212,255,0.1); }
-.dp-layer-toggle.active { color: #00d4ff; background: rgba(0,212,255,0.1); }
-.dp-theme-opt i, .dp-layer-toggle i { width: 16px; text-align: center; }
+.dp-theme-opt:hover, .dp-mode-opt:hover, .dp-layer-toggle:hover { background: rgba(255,255,255,0.08); }
+.dp-theme-opt.active, .dp-mode-opt.active, .dp-layer-toggle.active { color: #00d4ff; background: rgba(0,212,255,0.1); }
+.dp-theme-opt i, .dp-mode-opt i, .dp-layer-toggle i { width: 16px; text-align: center; }
 
 /* ── MapLibre popup theming ── */
 .maplibregl-popup-content {

@@ -1,7 +1,7 @@
 /* ============================================
    DrivePulse – MapLayers
    All map data layers: vehicle marker, route,
-   heatmaps, clusters, infrastructure overlays.
+   heatmaps, clusters, 3D buildings, overlays.
    ============================================ */
 const MapLayers = {
     vehicleMarker: null,
@@ -12,8 +12,61 @@ const MapLayers = {
         this._layersInitialized = false;
         this._initVehicleMarker(map);
         this._initLiveRouteLayer(map);
+        this._init3DBuildings(map);
         this._initInfraLayers(map);
         this._layersInitialized = true;
+    },
+
+    // ── 3D Building Extrusions ──
+    _init3DBuildings(map) {
+        if (map.getSource('openmaptiles')) return;
+
+        // Add OpenMapTiles vector source for building data
+        map.addSource('openmaptiles', {
+            type: 'vector',
+            tiles: [
+                'https://tiles.basemaps.cartocdn.com/vectortiles/carto.streets/v1/{z}/{x}/{y}.mvt'
+            ],
+            minzoom: 0,
+            maxzoom: 14
+        });
+
+        // 3D building extrusion layer (hidden by default)
+        map.addLayer({
+            id: 'building-3d',
+            type: 'fill-extrusion',
+            source: 'openmaptiles',
+            'source-layer': 'building',
+            minzoom: 14,
+            layout: { visibility: 'none' },
+            paint: {
+                'fill-extrusion-color': [
+                    'interpolate', ['linear'], ['get', 'render_height'],
+                    0,  'rgba(60, 60, 80, 0.8)',
+                    20, 'rgba(80, 100, 140, 0.8)',
+                    50, 'rgba(100, 130, 180, 0.8)'
+                ],
+                'fill-extrusion-height': ['coalesce', ['get', 'render_height'], 10],
+                'fill-extrusion-base': ['coalesce', ['get', 'render_min_height'], 0],
+                'fill-extrusion-opacity': 0.7
+            }
+        });
+
+        // Road outlines for 3D context
+        map.addLayer({
+            id: 'road-3d-outline',
+            type: 'line',
+            source: 'openmaptiles',
+            'source-layer': 'transportation',
+            minzoom: 14,
+            layout: { visibility: 'none', 'line-join': 'round', 'line-cap': 'round' },
+            filter: ['in', 'class', 'motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'street'],
+            paint: {
+                'line-color': 'rgba(0, 212, 255, 0.15)',
+                'line-width': ['interpolate', ['linear'], ['zoom'], 14, 1, 18, 4],
+                'line-opacity': 0.6
+            }
+        });
     },
 
     // ── Vehicle Marker (custom animated) ──
@@ -253,9 +306,12 @@ const MapLayers = {
             const newVis = forceVisible !== undefined ? (forceVisible ? 'visible' : 'none') : (currentVis === 'visible' ? 'none' : 'visible');
             map.setLayoutProperty(layerId, 'visibility', newVis);
 
-            // If showing clusters, also show their labels
+            // Companion layers
             if (layerId === 'clusters') {
                 map.setLayoutProperty('cluster-count', 'visibility', newVis);
+            }
+            if (layerId === 'building-3d') {
+                map.setLayoutProperty('road-3d-outline', 'visibility', newVis);
             }
         } catch(e) {}
     }
