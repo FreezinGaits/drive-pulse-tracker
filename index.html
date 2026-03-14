@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>DrivePulse – Smart Trip Tracker</title>
+  <meta name="description"
+    content="DrivePulse converts everyday driving trips into detailed driving analytics. Track speed, acceleration, braking, and cornering with smartphone sensors.">
+  <meta name="theme-color" content="#0a0e1a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+
+  <!-- ===== SPLASH SCREEN ===== -->
+  <div id="splash-screen" class="screen splash-screen active">
+    <div class="splash-content">
+      <div class="splash-logo-container">
+        <div class="splash-pulse-ring"></div>
+        <div class="splash-pulse-ring delay-1"></div>
+        <div class="splash-pulse-ring delay-2"></div>
+        <div class="splash-icon">
+          <i class="fas fa-car-side"></i>
+        </div>
+      </div>
+      <h1 class="splash-title">Drive<span class="accent">Pulse</span></h1>
+      <p class="splash-tagline">Smart Trip Tracker</p>
+      <div class="splash-loader">
+        <div class="splash-loader-bar"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SENSOR PERMISSION OVERLAY ===== -->
+  <div id="permission-overlay" class="permission-overlay">
+    <div class="permission-card glass-card">
+      <div class="permission-icon">
+        <i class="fas fa-satellite-dish"></i>
+      </div>
+      <h2>Enable Sensors</h2>
+      <p>DrivePulse needs access to your phone's sensors to track trips in real-time.</p>
+      <div class="permission-list">
+        <div class="permission-item">
+          <i class="fas fa-location-dot"></i>
+          <div>
+            <span class="perm-title">GPS Location</span>
+            <span class="perm-desc">Track route, speed & distance</span>
+          </div>
+        </div>
+        <div class="permission-item">
+          <i class="fas fa-arrows-up-down"></i>
+          <div>
+            <span class="perm-title">Accelerometer</span>
+            <span class="perm-desc">Detect acceleration & braking</span>
+          </div>
+        </div>
+        <div class="permission-item">
+          <i class="fas fa-compass"></i>
+          <div>
+            <span class="perm-title">Gyroscope</span>
+            <span class="perm-desc">Detect cornering & rotations</span>
+          </div>
+        </div>
+        <div class="permission-item">
+          <i class="fas fa-bell"></i>
+          <div>
+            <span class="perm-title">Notifications</span>
+            <span class="perm-desc">Trip start/end alerts</span>
+          </div>
+        </div>
+      </div>
+      <button class="permission-btn primary" id="grant-permissions-btn">
+        <i class="fas fa-check-circle"></i> Enable All Sensors
+      </button>
+      <button class="permission-btn secondary" id="skip-permissions-btn">
+        Skip for Now
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== MAIN APP ===== -->
+  <div id="app-container" class="app-container hidden">
+
+    <!-- ===== TOP BAR ===== -->
+    <header class="top-bar" id="top-bar">
+      <div class="top-bar-left">
+        <button class="back-btn hidden" id="back-btn" aria-label="Go back">
+          <i class="fas fa-chevron-left"></i>
+        </button>
+        <div class="app-brand">
+          <i class="fas fa-car-side brand-icon"></i>
+          <span class="brand-text">Drive<span class="accent">Pulse</span></span>
+        </div>
+      </div>
+      <div class="top-bar-center">
+        <span class="engine-status" id="engine-status">Sensors Off</span>
+      </div>
+      <div class="top-bar-right">
+        <button class="notification-btn" id="notification-btn" aria-label="Notifications">
+          <i class="fas fa-bell"></i>
+          <span class="notif-badge" style="display:none;">0</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- ===== NOTIFICATION PANEL ===== -->
+    <div class="notification-panel" id="notification-panel">
+      <div class="notif-panel-header">
+        <h3>Notifications</h3>
+        <button class="notif-clear-btn" id="clear-notifs-btn">Clear All</button>
+      </div>
+      <div class="notif-panel-list" id="notification-list">
+        <div class="empty-state">
+          <i class="fas fa-bell-slash"></i>
+          <p>No notifications yet</p>
+          <span>Start a trip to see updates here</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== EVENT INDICATOR ===== -->
+    <div class="event-indicator" id="event-indicator"></div>
+
+    <!-- ===== HOME SCREEN ===== -->
+    <section id="screen-home" class="screen page-screen active">
+      <div class="page-content">
+        <!-- Greeting -->
+        <div class="greeting-section">
+          <h1 class="greeting-text"><span id="greeting-prefix">Good Morning,</span> <span class="accent"
+              id="greeting-name">Driver</span></h1>
+          <p class="greeting-sub">Your driving insights at a glance</p>
+        </div>
+
+        <!-- Live Trip Card -->
+        <div class="live-trip-card" id="live-trip-card">
+          <div class="live-trip-header">
+            <div class="live-indicator">
+              <span class="live-dot"></span>
+              <span id="live-status-text">READY</span>
+            </div>
+            <div class="live-header-right">
+              <span class="gps-accuracy" id="gps-accuracy"></span>
+              <button class="trip-toggle-btn" id="trip-toggle-btn">
+                <i class="fas fa-play"></i>
+                <span>Start Trip</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Speedometer -->
+          <div class="speedometer-container">
+            <svg class="speedometer" viewBox="0 0 300 200" id="speedometer-svg">
+              <defs>
+                <linearGradient id="speed-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#00d4ff" />
+                  <stop offset="50%" stop-color="#7c3aed" />
+                  <stop offset="100%" stop-color="#ff006e" />
+                </linearGradient>
+                <filter id="glow">
+                  <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+                  <feMerge>
+                    <feMergeNode in="coloredBlur" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
+              </defs>
+              <path class="speed-bg" d="M 30 180 A 120 120 0 0 1 270 180" fill="none" stroke="rgba(255,255,255,0.05)"
+                stroke-width="12" stroke-linecap="round" />
+              <path class="speed-arc" id="speed-arc" d="M 30 180 A 120 120 0 0 1 270 180" fill="none"
+                stroke="url(#speed-gradient)" stroke-width="12" stroke-linecap="round" stroke-dasharray="377"
+                stroke-dashoffset="377" filter="url(#glow)" />
+              <g class="tick-marks" id="tick-marks"></g>
+              <text x="150" y="140" text-anchor="middle" class="speed-value" id="speed-value">0</text>
+              <text x="150" y="165" text-anchor="middle" class="speed-unit">km/h</text>
+            </svg>
+          </div>
+
+          <!-- Live Stats Row -->
+          <div class="live-stats-row">
+            <div class="live-stat">
+              <i class="fas fa-road"></i>
+              <span class="live-stat-value" id="live-distance">0.0</span>
+              <span class="live-stat-label">km</span>
+            </div>
+            <div class="live-stat">
+              <i class="fas fa-clock"></i>
+              <span class="live-stat-value" id="live-duration">00:00</span>
+              <span class="live-stat-label">duration</span>
+            </div>
+            <div class="live-stat">
+              <i class="fas fa-tachometer-alt"></i>
+              <span class="live-stat-value" id="live-avg-speed">0</span>
+              <span class="live-stat-label">avg km/h</span>
+            </div>
+            <div class="live-stat">
+              <i class="fas fa-bolt"></i>
+              <span class="live-stat-value" id="live-gforce">0.0</span>
+              <span class="live-stat-label">G-force</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Stats Cards -->
+        <div class="section-header">
+          <h2>Today's Overview</h2>
+        </div>
+        <div class="quick-stats-grid">
+          <div class="stat-card glass-card" data-color="cyan">
+            <div class="stat-card-icon"><i class="fas fa-route"></i></div>
+            <div class="stat-card-info">
+              <span class="stat-card-value" id="today-trips">0</span>
+              <span class="stat-card-label">Trips Today</span>
+            </div>
+          </div>
+          <div class="stat-card glass-card" data-color="purple">
+            <div class="stat-card-icon"><i class="fas fa-road"></i></div>
+            <div class="stat-card-info">
+              <span class="stat-card-value" id="today-distance">0.0</span>
+              <span class="stat-card-label">km Driven</span>
+            </div>
+          </div>
+          <div class="stat-card glass-card" data-color="pink">
+            <div class="stat-card-icon"><i class="fas fa-gauge-high"></i></div>
+            <div class="stat-card-info">
+              <span class="stat-card-value" id="today-max-speed">0</span>
+              <span class="stat-card-label">Max km/h</span>
+            </div>
+          </div>
+          <div class="stat-card glass-card" data-color="green">
+            <div class="stat-card-icon"><i class="fas fa-shield-halved"></i></div>
+            <div class="stat-card-info">
+              <span class="stat-card-value" id="driving-score">--</span>
+              <span class="stat-card-label">Drive Score</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Driving Behavior -->
+        <div class="section-header">
+          <h2>Driving Behavior</h2>
+          <span class="section-badge">This Week</span>
+        </div>
+        <div class="behavior-card glass-card">
+          <div class="behavior-items">
+            <div class="behavior-item">
+              <div class="behavior-icon accel"><i class="fas fa-arrow-up"></i></div>
+              <div class="behavior-info">
+                <span class="behavior-label">Acceleration Events</span>
+                <div class="behavior-bar-container">
+                  <div class="behavior-bar" style="--bar-width: 0%; --bar-color: #00d4ff;"></div>
+                </div>
+              </div>
+              <span class="behavior-count">0</span>
+            </div>
+            <div class="behavior-item">
+              <div class="behavior-icon brake"><i class="fas fa-arrow-down"></i></div>
+              <div class="behavior-info">
+                <span class="behavior-label">Hard Braking</span>
+                <div class="behavior-bar-container">
+                  <div class="behavior-bar" style="--bar-width: 0%; --bar-color: #ff006e;"></div>
+                </div>
+              </div>
+              <span class="behavior-count">0</span>
+            </div>
+            <div class="behavior-item">
+              <div class="behavior-icon corner"><i class="fas fa-rotate-right"></i></div>
+              <div class="behavior-info">
+                <span class="behavior-label">Sharp Cornering</span>
+                <div class="behavior-bar-container">
+                  <div class="behavior-bar" style="--bar-width: 0%; --bar-color: #7c3aed;"></div>
+                </div>
+              </div>
+              <span class="behavior-count">0</span>
+            </div>
+            <div class="behavior-item">
+              <div class="behavior-icon stops"><i class="fas fa-stop"></i></div>
+              <div class="behavior-info">
+                <span class="behavior-label">Stops Made</span>
+                <div class="behavior-bar-container">
+                  <div class="behavior-bar" style="--bar-width: 0%; --bar-color: #fbbf24;"></div>
+                </div>
+              </div>
+              <span class="behavior-count">0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Speed Chart -->
+        <div class="section-header">
+          <h2>Speed Analysis</h2>
+          <span class="section-badge">Last Trip</span>
+        </div>
+        <div class="chart-card glass-card">
+          <canvas id="speed-chart" height="200"></canvas>
+        </div>
+
+        <!-- Recent Trips -->
+        <div class="section-header">
+          <h2>Recent Trips</h2>
+          <button class="see-all-btn" data-navigate="history">See All <i class="fas fa-chevron-right"></i></button>
+        </div>
+        <div class="recent-trips-list" id="recent-trips-home"></div>
+      </div>
+    </section>
+
+    <!-- ===== TRIP HISTORY SCREEN ===== -->
+    <section id="screen-history" class="screen page-screen">
+      <div class="page-content">
+        <div class="history-header">
+          <h1>Trip History</h1>
+          <div class="history-filter-row">
+            <button class="filter-chip active" data-filter="all">All</button>
+            <button class="filter-chip" data-filter="today">Today</button>
+            <button class="filter-chip" data-filter="week">This Week</button>
+            <button class="filter-chip" data-filter="month">This Month</button>
+          </div>
+        </div>
+        <div class="history-summary glass-card">
+          <div class="history-summary-stat">
+            <span class="hss-value">0</span>
+            <span class="hss-label">Total Trips</span>
+          </div>
+          <div class="history-summary-divider"></div>
+          <div class="history-summary-stat">
+            <span class="hss-value">0 km</span>
+            <span class="hss-label">Total Distance</span>
+          </div>
+          <div class="history-summary-divider"></div>
+          <div class="history-summary-stat">
+            <span class="hss-value">0h 0m</span>
+            <span class="hss-label">Total Time</span>
+          </div>
+        </div>
+        <div class="trips-list" id="trips-list"></div>
+      </div>
+    </section>
+
+    <!-- ===== TRIP DETAIL SCREEN ===== -->
+    <section id="screen-detail" class="screen page-screen">
+      <div class="page-content">
+        <div class="detail-header-card glass-card">
+          <div class="detail-date" id="detail-date"></div>
+          <div class="detail-time" id="detail-time"></div>
+          <div class="detail-route" id="detail-route">
+            <span class="route-dot start"></span>
+            <span class="route-line"></span>
+            <span class="route-dot end"></span>
+            <div class="route-labels">
+              <span id="detail-start-loc">Start</span>
+              <span id="detail-end-loc">End</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="detail-map-card glass-card">
+          <div id="trip-map" class="trip-map"></div>
+        </div>
+
+        <div class="detail-stats-grid">
+          <div class="detail-stat-card glass-card">
+            <i class="fas fa-road"></i>
+            <span class="ds-value" id="detail-distance">0</span>
+            <span class="ds-label">km Distance</span>
+          </div>
+          <div class="detail-stat-card glass-card">
+            <i class="fas fa-clock"></i>
+            <span class="ds-value" id="detail-duration">0 min</span>
+            <span class="ds-label">Duration</span>
+          </div>
+          <div class="detail-stat-card glass-card">
+            <i class="fas fa-gauge"></i>
+            <span class="ds-value" id="detail-avg-speed">0</span>
+            <span class="ds-label">Avg km/h</span>
+          </div>
+          <div class="detail-stat-card glass-card">
+            <i class="fas fa-gauge-high"></i>
+            <span class="ds-value" id="detail-max-speed">0</span>
+            <span class="ds-label">Max km/h</span>
+          </div>
+          <div class="detail-stat-card glass-card">
+            <i class="fas fa-arrow-up"></i>
+            <span class="ds-value" id="detail-accel">0</span>
+            <span class="ds-label">Accelerations</span>
+          </div>
+          <div class="detail-stat-card glass-card">
+            <i class="fas fa-arrow-down"></i>
+            <span class="ds-value" id="detail-braking">0</span>
+            <span class="ds-label">Hard Brakes</span>
+          </div>
+          <div class="detail-stat-card glass-card">
+            <i class="fas fa-rotate-right"></i>
+            <span class="ds-value" id="detail-cornering">0</span>
+            <span class="ds-label">Sharp Corners</span>
+          </div>
+          <div class="detail-stat-card glass-card">
+            <i class="fas fa-bolt"></i>
+            <span class="ds-value" id="detail-gforce">0</span>
+            <span class="ds-label">Max G-Force</span>
+          </div>
+        </div>
+
+        <div class="section-header">
+          <h2>Speed Profile</h2>
+        </div>
+        <div class="chart-card glass-card">
+          <canvas id="detail-speed-chart" height="200"></canvas>
+        </div>
+
+        <div class="section-header">
+          <h2>Acceleration Events</h2>
+        </div>
+        <div class="chart-card glass-card">
+          <canvas id="detail-accel-chart" height="180"></canvas>
+        </div>
+
+        <div class="section-header">
+          <h2>Trip Driving Score</h2>
+        </div>
+        <div class="driving-score-card glass-card">
+          <div class="score-circle-container">
+            <svg class="score-circle" viewBox="0 0 120 120">
+              <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="10" />
+              <circle cx="60" cy="60" r="50" fill="none" stroke="url(#speed-gradient)" stroke-width="10"
+                stroke-linecap="round" stroke-dasharray="314" stroke-dashoffset="314" class="score-progress"
+                id="score-progress" />
+            </svg>
+            <div class="score-text">
+              <span class="score-number" id="detail-score">0</span>
+              <span class="score-label">/ 100</span>
+            </div>
+          </div>
+          <div class="score-breakdown">
+            <div class="score-item">
+              <span class="si-label">Speed Control</span>
+              <div class="si-bar">
+                <div class="si-fill" style="width:0%; background: #00d4ff;"></div>
+              </div>
+              <span class="si-val">0</span>
+            </div>
+            <div class="score-item">
+              <span class="si-label">Smooth Braking</span>
+              <div class="si-bar">
+                <div class="si-fill" style="width:0%; background: #7c3aed;"></div>
+              </div>
+              <span class="si-val">0</span>
+            </div>
+            <div class="score-item">
+              <span class="si-label">Cornering</span>
+              <div class="si-bar">
+                <div class="si-fill" style="width:0%; background: #ff006e;"></div>
+              </div>
+              <span class="si-val">0</span>
+            </div>
+            <div class="score-item">
+              <span class="si-label">Acceleration</span>
+              <div class="si-bar">
+                <div class="si-fill" style="width:0%; background: #fbbf24;"></div>
+              </div>
+              <span class="si-val">0</span>
+            </div>
+          </div>
+        </div>
+
+        <button class="share-btn" id="share-trip-btn">
+          <i class="fas fa-share-nodes"></i>
+          Share Trip Summary
+        </button>
+      </div>
+    </section>
+
+    <!-- ===== ANALYTICS SCREEN ===== -->
+    <section id="screen-analytics" class="screen page-screen">
+      <div class="page-content">
+        <div class="greeting-section">
+          <h1>Analytics</h1>
+          <p class="greeting-sub">Your driving performance insights</p>
+        </div>
+
+        <div class="period-selector">
+          <button class="period-chip active" data-period="week">Week</button>
+          <button class="period-chip" data-period="month">Month</button>
+          <button class="period-chip" data-period="year">Year</button>
+        </div>
+
+        <div class="analytics-overview glass-card">
+          <div class="ao-stat">
+            <div class="ao-icon" style="background: rgba(0,212,255,0.15); color: #00d4ff;"><i class="fas fa-road"></i>
+            </div>
+            <div class="ao-info">
+              <span class="ao-value">0 km</span>
+              <span class="ao-label">Distance</span>
+            </div>
+          </div>
+          <div class="ao-stat">
+            <div class="ao-icon" style="background: rgba(124,58,237,0.15); color: #7c3aed;"><i class="fas fa-clock"></i>
+            </div>
+            <div class="ao-info">
+              <span class="ao-value">0h 0m</span>
+              <span class="ao-label">Drive Time</span>
+            </div>
+          </div>
+          <div class="ao-stat">
+            <div class="ao-icon" style="background: rgba(255,0,110,0.15); color: #ff006e;"><i class="fas fa-route"></i>
+            </div>
+            <div class="ao-info">
+              <span class="ao-value">0</span>
+              <span class="ao-label">Trips</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-header">
+          <h2>Distance by Day</h2>
+        </div>
+        <div class="chart-card glass-card">
+          <canvas id="analytics-distance-chart" height="200"></canvas>
+        </div>
+
+        <div class="section-header">
+          <h2>Speed Distribution</h2>
+        </div>
+        <div class="chart-card glass-card">
+          <canvas id="analytics-speed-dist" height="200"></canvas>
+        </div>
+
+        <div class="section-header">
+          <h2>Driving Score Trend</h2>
+        </div>
+        <div class="chart-card glass-card">
+          <canvas id="analytics-score-chart" height="180"></canvas>
+        </div>
+
+        <div class="section-header">
+          <h2>Sensor Activity</h2>
+        </div>
+        <div class="sensor-grid">
+          <div class="sensor-card glass-card">
+            <div class="sensor-icon gps-icon"><i class="fas fa-satellite-dish"></i></div>
+            <span class="sensor-name">GPS</span>
+            <span class="sensor-status-indicator" data-sensor="gps">Inactive</span>
+          </div>
+          <div class="sensor-card glass-card">
+            <div class="sensor-icon accel-icon"><i class="fas fa-arrows-up-down"></i></div>
+            <span class="sensor-name">Accelerometer</span>
+            <span class="sensor-status-indicator" data-sensor="motion">Inactive</span>
+          </div>
+          <div class="sensor-card glass-card">
+            <div class="sensor-icon gyro-icon"><i class="fas fa-compass"></i></div>
+            <span class="sensor-name">Gyroscope</span>
+            <span class="sensor-status-indicator" data-sensor="motion">Inactive</span>
+          </div>
+          <div class="sensor-card glass-card">
+            <div class="sensor-icon mag-icon"><i class="fas fa-magnet"></i></div>
+            <span class="sensor-name">Magnetometer</span>
+            <span class="sensor-status-indicator" data-sensor="orientation">Inactive</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== SETTINGS SCREEN ===== -->
+    <section id="screen-settings" class="screen page-screen">
+      <div class="page-content">
+        <div class="greeting-section">
+          <h1>Settings</h1>
+          <p class="greeting-sub">Customize your DrivePulse experience</p>
+        </div>
+
+        <div class="profile-card glass-card">
+          <div class="profile-avatar"><i class="fas fa-user"></i></div>
+          <div class="profile-info">
+            <span class="profile-name">Driver</span>
+            <span class="profile-email">Tap to set up profile</span>
+          </div>
+          <button class="profile-edit-btn"><i class="fas fa-pen"></i></button>
+        </div>
+
+        <!-- Sensor Control -->
+        <div class="settings-group">
+          <h3 class="settings-group-title">Sensors</h3>
+          <div class="setting-item glass-card" style="display:flex;align-items:center;justify-content:space-between;">
+            <div class="setting-info" style="margin-bottom:0;">
+              <i class="fas fa-satellite-dish"></i>
+              <div>
+                <span class="setting-label">Enable Sensors</span>
+                <span class="setting-desc">GPS, Accelerometer, Gyroscope</span>
+              </div>
+            </div>
+            <button class="permission-btn primary small" id="enable-sensors-btn">
+              <i class="fas fa-power-off"></i> Activate
+            </button>
+          </div>
+        </div>
+
+        <!-- Trip Detection -->
+        <div class="settings-group">
+          <h3 class="settings-group-title">Trip Detection</h3>
+          <div class="setting-item glass-card">
+            <div class="setting-info">
+              <i class="fas fa-play-circle"></i>
+              <div>
+                <span class="setting-label">Auto Start Speed</span>
+                <span class="setting-desc">Minimum speed to start tracking</span>
+              </div>
+            </div>
+            <div class="setting-control">
+              <input type="range" id="setting-start-speed" min="5" max="30" value="10" class="setting-slider">
+              <span class="setting-value" id="setting-start-speed-val">10 km/h</span>
+            </div>
+          </div>
+          <div class="setting-item glass-card">
+            <div class="setting-info">
+              <i class="fas fa-stop-circle"></i>
+              <div>
+                <span class="setting-label">Auto Stop Speed</span>
+                <span class="setting-desc">Speed below which trip ends</span>
+              </div>
+            </div>
+            <div class="setting-control">
+              <input type="range" id="setting-stop-speed" min="1" max="10" value="3" class="setting-slider">
+              <span class="setting-value" id="setting-stop-speed-val">3 km/h</span>
+            </div>
+          </div>
+          <div class="setting-item glass-card">
+            <div class="setting-info">
+              <i class="fas fa-hourglass-half"></i>
+              <div>
+                <span class="setting-label">Stop Timeout</span>
+                <span class="setting-desc">Minutes before trip auto-ends</span>
+              </div>
+            </div>
+            <div class="setting-control">
+              <input type="range" id="setting-stop-timeout" min="1" max="10" value="3" class="setting-slider">
+              <span class="setting-value" id="setting-stop-timeout-val">3 min</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sensitivity -->
+        <div class="settings-group">
+          <h3 class="settings-group-title">Sensor Sensitivity</h3>
+          <div class="setting-item glass-card">
+            <div class="setting-info">
+              <i class="fas fa-arrow-up"></i>
+              <div>
+                <span class="setting-label">Acceleration Threshold</span>
+                <span class="setting-desc">G-force to register event</span>
+              </div>
+            </div>
+            <div class="setting-control">
+              <input type="range" id="setting-accel-thresh" min="2" max="8" value="4" step="1" class="setting-slider">
+              <span class="setting-value" id="setting-accel-thresh-val">0.4 G</span>
+            </div>
+          </div>
+          <div class="setting-item glass-card">
+            <div class="setting-info">
+              <i class="fas fa-arrow-down"></i>
+              <div>
+                <span class="setting-label">Braking Threshold</span>
+                <span class="setting-desc">G-force to register braking</span>
+              </div>
+            </div>
+            <div class="setting-control">
+              <input type="range" id="setting-brake-thresh" min="2" max="8" value="5" step="1" class="setting-slider">
+              <span class="setting-value" id="setting-brake-thresh-val">0.5 G</span>
+            </div>
+          </div>
+          <div class="setting-item glass-card">
+            <div class="setting-info">
+              <i class="fas fa-rotate-right"></i>
+              <div>
+                <span class="setting-label">Cornering Threshold</span>
+                <span class="setting-desc">Angular velocity for cornering</span>
+              </div>
+            </div>
+            <div class="setting-control">
+              <input type="range" id="setting-corner-thresh" min="10" max="50" value="30" class="setting-slider">
+              <span class="setting-value" id="setting-corner-thresh-val">30 °/s</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- General -->
+        <div class="settings-group">
+          <h3 class="settings-group-title">General</h3>
+          <div class="setting-item glass-card">
+            <div class="setting-info">
+              <i class="fas fa-bell"></i>
+              <div>
+                <span class="setting-label">Notifications</span>
+                <span class="setting-desc">Trip start/end alerts</span>
+              </div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" checked id="setting-notifs">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="setting-item glass-card">
+            <div class="setting-info">
+              <i class="fas fa-location-arrow"></i>
+              <div>
+                <span class="setting-label">Background Tracking</span>
+                <span class="setting-desc">Keep screen on during trips</span>
+              </div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" checked id="setting-background">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="setting-item glass-card">
+            <div class="setting-info">
+              <i class="fas fa-ruler"></i>
+              <div>
+                <span class="setting-label">Units</span>
+                <span class="setting-desc">Distance & speed units</span>
+              </div>
+            </div>
+            <select class="setting-select" id="setting-units">
+              <option value="metric">Metric (km/h)</option>
+              <option value="imperial">Imperial (mph)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Data Management -->
+        <div class="settings-group">
+          <h3 class="settings-group-title">Data</h3>
+          <div class="setting-item glass-card" style="display:flex;align-items:center;justify-content:space-between;">
+            <div class="setting-info" style="margin-bottom:0;">
+              <i class="fas fa-download"></i>
+              <div>
+                <span class="setting-label">Export Trip Data</span>
+                <span class="setting-desc">Download as JSON file</span>
+              </div>
+            </div>
+            <button class="export-btn" id="export-data-btn"><i class="fas fa-file-export"></i></button>
+          </div>
+          <div class="setting-item glass-card danger"
+            style="display:flex;align-items:center;justify-content:space-between;">
+            <div class="setting-info" style="margin-bottom:0;">
+              <i class="fas fa-trash-alt"></i>
+              <div>
+                <span class="setting-label">Clear All Data</span>
+                <span class="setting-desc">Delete all trips permanently</span>
+              </div>
+            </div>
+            <button class="delete-btn" id="clear-data-btn"><i class="fas fa-trash"></i></button>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <h3 class="settings-group-title">About</h3>
+          <div class="setting-item glass-card" style="display:flex;align-items:center;justify-content:space-between;">
+            <div class="setting-info" style="margin-bottom:0;">
+              <i class="fas fa-info-circle"></i>
+              <div>
+                <span class="setting-label">DrivePulse</span>
+                <span class="setting-desc">v1.0.0 • Smart Trip Tracker</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== BOTTOM NAVIGATION ===== -->
+    <nav class="bottom-nav" id="bottom-nav">
+      <button class="nav-item active" data-screen="home" id="nav-home">
+        <i class="fas fa-house"></i>
+        <span>Home</span>
+      </button>
+      <button class="nav-item" data-screen="history" id="nav-history">
+        <i class="fas fa-clock-rotate-left"></i>
+        <span>History</span>
+      </button>
+      <button class="nav-item" data-screen="analytics" id="nav-analytics">
+        <i class="fas fa-chart-line"></i>
+        <span>Analytics</span>
+      </button>
+      <button class="nav-item" data-screen="settings" id="nav-settings">
+        <i class="fas fa-gear"></i>
+        <span>Settings</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- ===== PROFILE EDIT MODAL ===== -->
+  <div class="modal-overlay" id="profile-modal">
+    <div class="modal glass-card">
+      <div class="modal-header">
+        <h3>Edit Profile</h3>
+        <button class="modal-close" id="profile-modal-close"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Name</label>
+          <input type="text" id="profile-name-input" class="form-input" placeholder="Enter your name">
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="profile-email-input" class="form-input" placeholder="Enter your email">
+        </div>
+        <div class="form-group">
+          <label>Vehicle Name</label>
+          <input type="text" id="profile-vehicle-input" class="form-input"
+            placeholder="e.g. Honda Activa, Maruti Swift">
+        </div>
+        <div class="form-group">
+          <label>Vehicle Type</label>
+          <select id="profile-vehicle-type" class="form-input">
+            <option value="car">🚗 Car</option>
+            <option value="bike">🏍️ Motorcycle / Bike</option>
+            <option value="scooter">🛵 Scooter</option>
+            <option value="truck">🚛 Truck</option>
+            <option value="bus">🚌 Bus</option>
+            <option value="other">🚙 Other</option>
+          </select>
+        </div>
+        <button class="share-btn" id="profile-save-btn" style="margin-top:8px;">
+          <i class="fas fa-check"></i> Save Profile
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SHARE MODAL ===== -->
+  <div class="modal-overlay" id="share-modal">
+    <div class="modal glass-card">
+      <div class="modal-header">
+        <h3>Share Trip Summary</h3>
+        <button class="modal-close" id="modal-close"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="share-preview" id="share-preview">
+          <div class="share-card">
+            <div class="share-brand">Drive<span class="accent">Pulse</span></div>
+            <div class="share-stats">
+              <div class="share-stat">
+                <span class="share-stat-val" id="share-distance">0 km</span>
+                <span class="share-stat-lbl">Distance</span>
+              </div>
+              <div class="share-stat">
+                <span class="share-stat-val" id="share-duration">0 min</span>
+                <span class="share-stat-lbl">Duration</span>
+              </div>
+              <div class="share-stat">
+                <span class="share-stat-val" id="share-max-speed">0 km/h</span>
+                <span class="share-stat-lbl">Max Speed</span>
+              </div>
+              <div class="share-stat">
+                <span class="share-stat-val" id="share-score">0/100</span>
+                <span class="share-stat-lbl">Score</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="share-actions">
+          <button class="share-action-btn" id="share-download"><i class="fas fa-download"></i> Download</button>
+          <button class="share-action-btn" id="share-copy"><i class="fas fa-copy"></i> Copy</button>
+          <button class="share-action-btn whatsapp"><i class="fab fa-whatsapp"></i> WhatsApp</button>
+          <button class="share-action-btn twitter"><i class="fab fa-x-twitter"></i> Twitter</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== TOAST ===== -->
+  <div class="toast" id="toast">
+    <i class="fas fa-check-circle"></i>
+    <span id="toast-message"></span>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/sensors.js"></script>
+  <script src="js/tripEngine.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+</body>
+
+</html>

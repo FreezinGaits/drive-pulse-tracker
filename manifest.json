@@ -1,0 +1,25 @@
+{
+    "name": "DrivePulse – Smart Trip Tracker",
+    "short_name": "DrivePulse",
+    "description": "Track your driving trips with real-time speed, acceleration, braking, and cornering analytics using smartphone sensors.",
+    "start_url": "/",
+    "display": "standalone",
+    "orientation": "portrait",
+    "background_color": "#0a0e1a",
+    "theme_color": "#0a0e1a",
+    "categories": ["navigation", "utilities"],
+    "icons": [
+        {
+            "src": "icons/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "icons/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ]
+}
