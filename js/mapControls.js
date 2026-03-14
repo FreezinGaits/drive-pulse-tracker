@@ -7,10 +7,10 @@ const MapControls = {
     _attached: false,
 
     attach(map, containerId) {
-        const parent = document.getElementById(containerId).parentElement;
+        const container = document.getElementById(containerId);
 
         // Remove old controls if re-attaching
-        const old = parent.querySelector('#dp-map-controls');
+        const old = container.querySelector('#dp-map-controls');
         if (old) old.remove();
 
         // ── Build controls HTML ──
@@ -58,7 +58,7 @@ const MapControls = {
             <button id="dp-btn-gps"    class="dp-ctrl-btn dp-gps" title="Recenter GPS"><i class="fas fa-location-crosshairs"></i></button>
         `;
 
-        parent.appendChild(wrap);
+        container.appendChild(wrap);
 
         // ── Helper ──
         const $ = (sel) => wrap.querySelector(sel);

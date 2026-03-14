@@ -4,7 +4,7 @@
    and background keep-alive.
    ============================================ */
 
-const CACHE_NAME = 'drivepulse-v3.3';
+const CACHE_NAME = 'drivepulse-v3.4';
 const ASSETS = [
     '/',
     '/index.html',
@@ -74,7 +74,8 @@ self.addEventListener('fetch', (event) => {
                     return networkResponse;
                 }).catch((err) => {
                     if (cachedResponse) return cachedResponse;
-                    throw err; // Crucial: Let MapLibre know the fetch failed or was aborted!
+                    // Gracefully return 404 to avoid network errors breaking MapLibre when a tile is missing
+                    return new Response('', { status: 404, statusText: 'Not Found' });
                 });
                 
                 return cachedResponse || fetchPromise;
