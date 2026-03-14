@@ -911,65 +911,19 @@
     // LIVE TRACKING MAP
     // ============================================
     function initLiveTrackingMap() {
-        const mapEl = $('#live-tracking-map');
-        if (!mapEl) return;
+        if (!$('#live-tracking-map')) return;
 
-        if (ui.liveMap) {
-            ui.liveMap.remove();
-            ui.liveMap = null;
-        }
-
-        ui.liveMap = new maplibregl.Map({
-            container: 'live-tracking-map',
-            style: {
-                version: 8,
-                sources: {
-                    'carto-dark': {
-                        type: 'raster',
-                        tiles: [
-                            'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
-                            'https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
-                            'https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
-                            'https://d.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'
-                        ],
-                        tileSize: 256
-                    }
-                },
-                layers: [{
-                    id: 'carto-dark-layer', type: 'raster', source: 'carto-dark', minzoom: 0, maxzoom: 22
-                }]
-            },
-            center: [0, 0],
-            zoom: 2,
-            attributionControl: false,
-            dragPan: true
-        });
-
-        const liveIconEl = document.createElement('div');
-        liveIconEl.className = 'custom-live-marker';
-        liveIconEl.innerHTML = `
-            <div style="position: relative; width: 18px; height: 18px;">
-                <div style="position: absolute; width: 100%; height: 100%; top: -9px; left: -9px; border-radius: 50%; background: #00d4ff; opacity: 0.4; animation: livePulse 2s ease-out infinite;"></div>
-                <div style="position: absolute; width: 14px; height: 14px; top: -7px; left: -7px; border-radius: 50%; background: #00d4ff; border: 2px solid white; box-shadow: 0 0 10px rgba(0,212,255,0.8);"></div>
-            </div>
-        `;
-
-        ui.liveMarker = new maplibregl.Marker({ element: liveIconEl })
-            .setLngLat([0, 0])
-            .addTo(ui.liveMap);
+        MapEngine.initLiveMap('live-tracking-map');
 
         if (navigator.geolocation) {
             navigator.geolocation.watchPosition(
                 (pos) => {
                     const lat = pos.coords.latitude;
                     const lng = pos.coords.longitude;
+                    const heading = pos.coords.heading; // Device orientation
                     
-                    if (ui.liveMarker) ui.liveMarker.setLngLat([lng, lat]);
-                    
-                    if (ui.liveMapFollows && ui.liveMap) {
-                        try {
-                            ui.liveMap.flyTo({ center: [lng, lat], zoom: ui.liveMap.getZoom() < 14 ? 16 : ui.liveMap.getZoom() });
-                        } catch (e) {}
+                    if (window.MapLayers) {
+                        MapLayers.updateVehiclePosition(lng, lat, heading);
                     }
                 },
                 (err) => console.warn('Live map GPS error:', err),
@@ -977,27 +931,7 @@
             );
         }
 
-        ui.liveMap.on('dragstart', () => { ui.liveMapFollows = false; });
-
-        $('#live-map-zoom-in')?.addEventListener('click', () => {
-             if(ui.liveMap) ui.liveMap.zoomIn();
-        });
-        
-        $('#live-map-zoom-out')?.addEventListener('click', () => {
-             if(ui.liveMap) ui.liveMap.zoomOut();
-        });
-
-        $('#live-map-recenter')?.addEventListener('click', () => {
-             ui.liveMapFollows = true;
-             if(ui.liveMarker && ui.liveMap) {
-                 const center = ui.liveMarker.getLngLat();
-                 if(center.lat !== 0) {
-                     ui.liveMap.flyTo({ center: [center.lng, center.lat], zoom: 16, duration: 500 });
-                 }
-             }
-        });
-
-        setTimeout(() => { if(ui.liveMap) ui.liveMap.resize(); }, 500);
+        setTimeout(() => { if (ui.maps && ui.maps.live) ui.maps.live.resize(); }, 500);
     }
 
     // ============================================
@@ -1023,7 +957,7 @@
         try {
             ui.map = new maplibregl.Map({
                 container: 'trip-map',
-                style: {
+                style: MapEngine ? MapEngine.themes[MapEngine.currentTheme] : {
                     version: 8,
                     sources: { 'osm': { type: 'raster', tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], tileSize: 256 } },
                     layers: [{ id: 'osm-layer', type: 'raster', source: 'osm', minzoom: 0, maxzoom: 19 }]
@@ -1739,7 +1673,7 @@
 
         ui.infraMap = new maplibregl.Map({
             container: 'infra-map',
-            style: {
+            style: MapEngine ? MapEngine.themes[MapEngine.currentTheme] : {
                 version: 8,
                 sources: {
                     'carto-dark': {
