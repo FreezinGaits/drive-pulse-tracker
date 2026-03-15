@@ -590,6 +590,15 @@ DrivePulse.CityPulse = (function () {
         // Total km monitored
         const totalKm = segments.reduce((s, seg) => s + (seg.distance || 0), 0);
 
+        // Personal stats calculation
+        let userEmail = 'anonymous';
+        if (typeof SupabaseSync !== 'undefined') {
+            const session = await SupabaseSync.getSession();
+            if (session && session.user) userEmail = session.user.email;
+        }
+
+        const myEvents = events.filter(e => e.reported_by === userEmail);
+
         return {
             totalPotholes: potholes.length,
             potholeSeverity: {
@@ -607,6 +616,10 @@ DrivePulse.CityPulse = (function () {
             totalIssues: events.length,
             highPriorityCount: events.filter(e => e.severity === 'high' || e.severity === 'critical').length,
             activeMonitors: [...new Set(events.filter(e => e.reported_by).map(e => e.reported_by))].length || 1,
+            
+            // Individual contributions
+            myIssuesCount: myEvents.length,
+            
             allEvents: events,
             allSegments: segments,
         };

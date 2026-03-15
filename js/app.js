@@ -2039,7 +2039,7 @@
         const kmEl = $('#infra-km-monitored');
         if (kmEl) kmEl.textContent = stats.totalKmMonitored + ' km';
         const issuesEl = $('#infra-total-issues');
-        if (issuesEl) issuesEl.textContent = stats.totalIssues;
+        if (issuesEl) issuesEl.textContent = stats.myIssuesCount;
         const healthEl = $('#infra-road-health');
         if (healthEl) healthEl.textContent = stats.avgRoadScore + '/100';
 
