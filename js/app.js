@@ -57,6 +57,10 @@
         CityPulse.on('alert', handleInfraAlert);
         CityPulse.on('infraEvent', handleInfraEvent);
 
+        // Handle Auth and Cloud
+        await initAuth();
+        initCloudSync();
+
         // Register PWA service worker
         registerServiceWorker();
 
@@ -144,6 +148,130 @@
         const nameEl = $('#greeting-name');
         const greetEl = $('#greeting-prefix');
         if (greetEl) greetEl.textContent = greeting + ',';
+    }
+
+    // ============================================
+    // AUTHENTICATION & LOGIN FLOW
+    // ============================================
+    async function initAuth() {
+        if (!SupabaseSync.isConfigured()) return;
+
+        const authModal = $('#auth-modal');
+        const loginBtn = $('#auth-login-btn');
+        const registerBtn = $('#auth-register-btn');
+        const emailInput = $('#auth-email');
+        const passwordInput = $('#auth-password');
+        const errorMsg = $('#auth-error-msg');
+        const logoutBtn = $('#auth-logout-btn');
+
+        const session = await SupabaseSync.getSession();
+        
+        if (session) {
+            authModal.style.display = 'none'; // Logged in, hide blocker
+            SupabaseSync.startAutoSync(); // Start global map sync
+        } else {
+            authModal.style.display = 'flex'; // Block the screen
+        }
+
+        loginBtn?.addEventListener('click', async () => {
+            const email = emailInput.value.trim();
+            const password = passwordInput.value;
+            if(!email || !password) return showAuthError("Email and password required");
+            
+            loginBtn.textContent = 'Logging in...';
+            loginBtn.disabled = true;
+            try {
+                await SupabaseSync.login(email, password);
+                authModal.style.display = 'none';
+                SupabaseSync.startAutoSync(); // Fetch global infra maps immediately
+                showToast("Logged in successfully!");
+                // Restore their profile email to local storage settings
+                const prof = await DB.getProfile();
+                prof.email = email;
+                await DB.saveProfile(prof);
+                await loadProfile();
+            } catch (err) {
+                showAuthError(err.message);
+            }
+            loginBtn.textContent = 'Log In';
+            loginBtn.disabled = false;
+        });
+
+        registerBtn?.addEventListener('click', async () => {
+            const email = emailInput.value.trim();
+            const password = passwordInput.value;
+            if(!email || !password) return showAuthError("Email and password required");
+            
+            registerBtn.textContent = 'Registering...';
+            registerBtn.disabled = true;
+            try {
+                await SupabaseSync.register(email, password);
+                authModal.style.display = 'none';
+                SupabaseSync.startAutoSync(); // Fetch global infra maps immediately
+                showToast("Account created!");
+                const prof = await DB.getProfile();
+                prof.email = email;
+                await DB.saveProfile(prof);
+                await loadProfile();
+            } catch (err) {
+                showAuthError(err.message);
+            }
+            registerBtn.textContent = 'Register New Account';
+            registerBtn.disabled = false;
+        });
+
+        logoutBtn?.addEventListener('click', async () => {
+             if (confirm("Are you sure you want to log out?")) {
+                 await SupabaseSync.logout();
+                 location.reload(); // Hard reload the PWA to reset states
+             }
+        });
+
+        function showAuthError(msg) {
+             errorMsg.textContent = msg;
+             errorMsg.style.display = 'block';
+        }
+    }
+
+    // ============================================
+    // CLOUD SYNC & RESTORE
+    // ============================================
+    function initCloudSync() {
+        const syncPushBtn = $('#sync-push-btn');
+        const syncPullBtn = $('#sync-pull-btn');
+
+        syncPushBtn?.addEventListener('click', async () => {
+            syncPushBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            syncPushBtn.disabled = true;
+            try {
+                const res = await SupabaseSync.syncTripsToCloud();
+                showToast(`Backed up ${res.count} trips to cloud!`);
+            } catch (err) {
+                console.error(err);
+                if (err.message.includes("logged in")) {
+                    location.reload(); // force auth screen
+                } else {
+                    showToast('Sync failed: ' + err.message);
+                }
+            }
+            syncPushBtn.innerHTML = '<i class="fas fa-arrow-up"></i>';
+            syncPushBtn.disabled = false;
+        });
+
+        syncPullBtn?.addEventListener('click', async () => {
+            syncPullBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            syncPullBtn.disabled = true;
+            try {
+                const res = await SupabaseSync.restoreTripsFromCloud();
+                showToast(`Restored ${res.count} trips from cloud!`);
+                await loadAndRenderTrips(); // Refresh local UI
+            } catch (err) {
+                console.error(err);
+                showToast('Restore failed: ' + err.message);
+            }
+            syncPullBtn.innerHTML = '<i class="fas fa-arrow-down"></i>';
+            syncPullBtn.disabled = false;
+        });
     }
 
     // ============================================

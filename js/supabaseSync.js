@@ -1,124 +1,108 @@
 /* ============================================
-   DrivePulse – Supabase Infrastructure Sync
-   Global crowdsourced road hazard data.
-   
-   Security:
-   - Uses ONLY the anon key (safe for frontend)
-   - RLS policies restrict to SELECT + INSERT only
-   - service_role key is NEVER used here
-   - Trip data / GPS / profiles stay local
+   DrivePulse – Supabase Infrastructure Sync & Auth
    ============================================ */
 const SupabaseSync = (() => {
-    // ═══════════════════════════════════════════
-    // CONFIGURATION — Replace with your Supabase project values
-    // ═══════════════════════════════════════════
-    const SUPABASE_URL = 'https://eowglcxngpiivyrcwsve.supabase.co';       // e.g. https://xxxxxxxxxxxx.supabase.co
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVvd2dsY3huZ3BpaXZ5cmN3c3ZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1NTc3OTgsImV4cCI6MjA4OTEzMzc5OH0.6Ry-cZlDqR9JiUlovXNcW8Z3lFDoDwEC6NBXx3osrMQ'; // The anon (public) key — safe for frontend
+    const SUPABASE_URL = 'https://eowglcxngpiivyrcwsve.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVvd2dsY3huZ3BpaXZ5cmN3c3ZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1NTc3OTgsImV4cCI6MjA4OTEzMzc5OH0.6Ry-cZlDqR9JiUlovXNcW8Z3lFDoDwEC6NBXx3osrMQ';
+
+    let supaClient;
+    if (typeof window.supabase !== 'undefined') {
+        supaClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    }
 
     const TABLE = 'infra_events';
     let _initialized = false;
     let _syncInterval = null;
 
-    // ── Supabase REST API helper ──
-    // We use raw fetch() instead of the Supabase JS library to avoid
-    // adding another dependency. The REST API is simple and secure.
-    const headers = () => ({
-        'apikey': SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
-    });
-
-    const apiUrl = (path) => `${SUPABASE_URL}/rest/v1/${path}`;
-
-    // ── Check if configured ──
     function isConfigured() {
-        return SUPABASE_URL !== 'YOUR_SUPABASE_URL' && SUPABASE_ANON_KEY !== 'YOUR_SUPABASE_ANON_KEY';
+        return SUPABASE_URL !== 'YOUR_SUPABASE_URL' && SUPABASE_ANON_KEY !== 'YOUR_SUPABASE_ANON_KEY' && supaClient;
     }
 
     // ═══════════════════════════════════════════
-    // FETCH: Get all global infra events
+    // AUTHENTICATION
+    // ═══════════════════════════════════════════
+    async function getSession() {
+        if (!isConfigured()) return null;
+        const { data, error } = await supaClient.auth.getSession();
+        if (error) console.error("Supabase Auth Error:", error.message);
+        return data?.session;
+    }
+
+    async function login(email, password) {
+        if (!isConfigured()) throw new Error("Supabase is not configured.");
+        const { data, error } = await supaClient.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        return data.session;
+    }
+
+    async function register(email, password) {
+        if (!isConfigured()) throw new Error("Supabase is not configured.");
+        const { data, error } = await supaClient.auth.signUp({ email, password });
+        if (error) throw error;
+        return data.session;
+    }
+
+    async function logout() {
+        if (!isConfigured()) return;
+        await supaClient.auth.signOut();
+    }
+
+    // ═══════════════════════════════════════════
+    // INFRASTRUCTURE EVENTS (Public Data)
     // ═══════════════════════════════════════════
     async function fetchGlobalEvents() {
-        if (!isConfigured()) {
-            console.warn('SupabaseSync: Not configured. Skipping fetch.');
-            return [];
-        }
-
+        if (!isConfigured()) return [];
         try {
-            const resp = await fetch(
-                apiUrl(`${TABLE}?select=*&order=created_at.desc&limit=500`),
-                { headers: headers(), method: 'GET' }
-            );
+            const { data, error } = await supaClient
+                .from(TABLE)
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(500);
 
-            if (!resp.ok) {
-                console.warn('SupabaseSync: Fetch failed', resp.status, await resp.text());
+            if (error) {
+                console.warn('SupabaseSync: Fetch global events error', error.message);
                 return [];
             }
-
-            const data = await resp.json();
-            console.log(`🌐 SupabaseSync: Fetched ${data.length} global infra events`);
-            return data.map(row => {
-                // Dynamic severity based on confirmations count
-                const conf = row.confirmations || 1;
-                let severity = 'low';
-                if (conf >= 10) severity = 'critical';
-                else if (conf >= 5) severity = 'high';
-                else if (conf >= 2) severity = 'medium';
-
-                return {
-                    id: row.id,
-                    type: row.type,
-                    lat: row.lat,
-                    lng: row.lng,
-                    severity: severity,
-                    value: row.value || '',
-                    description: row.description || '',
-                    confirmations: conf,
-                    reported_by: row.reported_by || 'anonymous',
-                    timestamp: new Date(row.created_at).getTime(),
-                    source: 'global'
-                };
-            });
+            return data.map(evt => ({
+                id: evt.id,
+                type: evt.type,
+                lat: evt.lat,
+                lng: evt.lng,
+                severity: evt.severity,
+                value: evt.value,
+                description: evt.description,
+                confirmations: evt.confirmations,
+                reported_by: evt.reported_by,
+                timestamp: new Date(evt.created_at).getTime(),
+                expires_at: evt.expires_at,
+                source: 'global'
+            }));
         } catch (e) {
-            console.warn('SupabaseSync: Fetch error (offline?)', e.message);
+            console.warn('SupabaseSync: Fetch error', e.message);
             return [];
         }
     }
 
-    // ═══════════════════════════════════════════
-    // PUSH: Upload a new infra event
-    // ═══════════════════════════════════════════
     async function pushEvent(event) {
         if (!isConfigured()) return false;
-
         try {
-            const payload = {
+            const { error } = await supaClient.from(TABLE).insert({
                 type: event.type,
                 lat: event.lat,
                 lng: event.lng,
                 severity: event.severity || 'medium',
-                value: event.value || '',
+                value: String(event.value || ''),
                 description: event.description || '',
                 confirmations: event.confirmations || 1,
                 reported_by: event.reported_by || 'anonymous'
-            };
-
-            const resp = await fetch(apiUrl(TABLE), {
-                method: 'POST',
-                headers: headers(),
-                body: JSON.stringify(payload)
             });
 
-            if (!resp.ok) {
-                const errText = await resp.text();
-                console.warn('SupabaseSync: Push failed', resp.status, errText);
-                // Queue for later sync
+            if (error) {
+                console.warn('SupabaseSync: Push failed', error.message);
                 _queueForSync(event);
                 return false;
             }
-
-            console.log('📤 SupabaseSync: Event pushed to global DB');
+            console.log('📤 SupabaseSync: Event pushed globally');
             return true;
         } catch (e) {
             console.warn('SupabaseSync: Push error (offline?)', e.message);
@@ -127,35 +111,25 @@ const SupabaseSync = (() => {
         }
     }
 
-    // ═══════════════════════════════════════════
-    // BATCH PUSH: Upload multiple events at once
-    // ═══════════════════════════════════════════
     async function pushEvents(events) {
         if (!isConfigured() || events.length === 0) return false;
-
         try {
             const payload = events.map(e => ({
                 type: e.type,
                 lat: e.lat,
                 lng: e.lng,
                 severity: e.severity || 'medium',
-                value: e.value || '',
+                value: String(e.value || ''),
                 description: e.description || '',
                 confirmations: e.confirmations || 1,
                 reported_by: e.reported_by || 'anonymous'
             }));
 
-            const resp = await fetch(apiUrl(TABLE), {
-                method: 'POST',
-                headers: headers(),
-                body: JSON.stringify(payload)
-            });
-
-            if (!resp.ok) {
-                console.warn('SupabaseSync: Batch push failed', resp.status);
+            const { error } = await supaClient.from(TABLE).insert(payload);
+            if (error) {
+                console.warn('SupabaseSync: Batch push failed', error.message);
                 return false;
             }
-
             console.log(`📤 SupabaseSync: ${events.length} events pushed to global DB`);
             return true;
         } catch (e) {
@@ -164,21 +138,12 @@ const SupabaseSync = (() => {
         }
     }
 
-    // ═══════════════════════════════════════════
-    // UPDATE: Modify an existing event (Confirmations, Decay)
-    // ═══════════════════════════════════════════
     async function updateEvent(id, updates) {
-        if (!isConfigured() || typeof id !== 'string') return false; // Ensure it's a Supabase UUID string
-
+        if (!isConfigured() || typeof id !== 'string') return false;
         try {
-            const resp = await fetch(apiUrl(`${TABLE}?id=eq.${id}`), {
-                method: 'PATCH',
-                headers: headers(),
-                body: JSON.stringify(updates)
-            });
-
-            if (!resp.ok) {
-                console.warn('SupabaseSync: Update failed', resp.status);
+            const { error } = await supaClient.from(TABLE).update(updates).eq('id', id);
+            if (error) {
+                console.warn('SupabaseSync: Update failed', error.message);
                 return false;
             }
             console.log(`🔄 SupabaseSync: Event ${id} updated globally`);
@@ -189,20 +154,12 @@ const SupabaseSync = (() => {
         }
     }
 
-    // ═══════════════════════════════════════════
-    // DELETE: Remove an event globally (Smooth passes / Auto-healing)
-    // ═══════════════════════════════════════════
     async function deleteEvent(id) {
         if (!isConfigured() || typeof id !== 'string') return false;
-
         try {
-            const resp = await fetch(apiUrl(`${TABLE}?id=eq.${id}`), {
-                method: 'DELETE',
-                headers: headers()
-            });
-
-            if (!resp.ok) {
-                console.warn('SupabaseSync: Delete failed', resp.status);
+            const { error } = await supaClient.from(TABLE).delete().eq('id', id);
+            if (error) {
+                console.warn('SupabaseSync: Delete failed', error.message);
                 return false;
             }
             console.log(`🗑️ SupabaseSync: Event ${id} permanently deleted globally (Healed!)`);
@@ -214,10 +171,9 @@ const SupabaseSync = (() => {
     }
 
     // ═══════════════════════════════════════════
-    // OFFLINE QUEUE: Store failed pushes for retry
+    // OFFLINE QUEUE
     // ═══════════════════════════════════════════
     const QUEUE_KEY = 'drivepulse_sync_queue';
-
     function _queueForSync(event) {
         try {
             const queue = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
@@ -231,7 +187,6 @@ const SupabaseSync = (() => {
         try {
             const queue = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
             if (queue.length === 0) return;
-
             console.log(`🔄 SupabaseSync: Flushing ${queue.length} queued events...`);
             const success = await pushEvents(queue);
             if (success) {
@@ -241,49 +196,30 @@ const SupabaseSync = (() => {
         } catch(e) {}
     }
 
-    // ═══════════════════════════════════════════
-    // FULL SYNC: Fetch global + merge with local
-    // ═══════════════════════════════════════════
     async function fullSync() {
         if (!isConfigured()) return [];
-
-        // 1. Flush any queued events first
         await _flushQueue();
-
-        // 2. Fetch global events
         const globalEvents = await fetchGlobalEvents();
-
-        // 3. Merge: store globally fetched events into local IndexedDB
         if (globalEvents.length > 0 && typeof DB !== 'undefined') {
             try {
-                // Clear local infra cache and replace with global data
                 await DB.clearInfraEvents();
-                for (const event of globalEvents) {
-                    await DB.saveInfraEvent(event);
-                }
+                for (const event of globalEvents) await DB.saveInfraEvent(event);
                 console.log(`💾 SupabaseSync: Synced ${globalEvents.length} events to local cache`);
             } catch(e) {
                 console.warn('SupabaseSync: Local cache update failed', e);
             }
         }
-
         return globalEvents;
     }
 
-    // ═══════════════════════════════════════════
-    // AUTO-SYNC: Periodic background sync
-    // ═══════════════════════════════════════════
-    function startAutoSync(intervalMs = 120000) { // default: every 2 minutes
+    function startAutoSync(intervalMs = 120000) {
         if (_syncInterval) clearInterval(_syncInterval);
+        // Instant sync on startup
+        fullSync();
 
-        // Initial sync
-        setTimeout(() => fullSync(), 3000);
-
-        // Periodic sync
         _syncInterval = setInterval(async () => {
             if (navigator.onLine) {
                 await fullSync();
-                // Update map if layers are available
                 try {
                     const events = await DB.getAllInfraEvents();
                     if (events.length > 0 && typeof MapLayers !== 'undefined') {
@@ -293,7 +229,6 @@ const SupabaseSync = (() => {
             }
         }, intervalMs);
 
-        // Sync when coming back online
         window.addEventListener('online', () => {
             console.log('🌐 SupabaseSync: Back online, syncing...');
             fullSync();
@@ -311,10 +246,141 @@ const SupabaseSync = (() => {
     }
 
     // ═══════════════════════════════════════════
-    // PUBLIC API
+    // CLOUD BACKUP & RESTORE (Trips & Telemetry)
     // ═══════════════════════════════════════════
+    async function syncTripsToCloud() {
+        const session = await getSession();
+        if (!session) throw new Error("Must be logged in to sync to cloud.");
+        const userId = session.user.id;
+
+        // Fetch all local trips
+        const trips = await DB.getAllTrips();
+        if (trips.length === 0) return { success: true, count: 0 };
+
+        console.log(`Uploading ${trips.length} trips to cloud...`);
+
+        for (const trip of trips) {
+            // Upsert trip
+            const { error: tripError } = await supaClient.from('trips').upsert({
+                id: trip.id,
+                user_id: userId,
+                date: trip.date,
+                start_time: trip.startTime,
+                end_time: trip.endTime,
+                distance: trip.distance,
+                duration: trip.duration,
+                score: trip.score,
+                route: trip.route,
+                stats: trip.stats
+            });
+            if (tripError) {
+                console.warn(`Failed to sync trip ${trip.id}:`, tripError);
+                continue;
+            }
+
+            // Sync GPS Points
+            const gpsPoints = await DB.getGPSPoints(trip.id);
+            if (gpsPoints.length > 0) {
+                const payload = gpsPoints.map(p => ({
+                    trip_id: trip.id,
+                    latitude: p.latitude,
+                    longitude: p.longitude,
+                    speed: p.speed,
+                    altitude: p.altitude,
+                    accuracy: p.accuracy,
+                    timestamp: p.timestamp
+                }));
+                await supaClient.from('gps_points').delete().eq('trip_id', trip.id); // Clear old
+                await supaClient.from('gps_points').insert(payload);
+            }
+
+            // Sync Sensor Events
+            const sensorEvents = await DB.getSensorEvents(trip.id);
+            if (sensorEvents.length > 0) {
+                const payload = sensorEvents.map(e => ({
+                    trip_id: trip.id,
+                    type: e.type,
+                    timestamp: e.timestamp,
+                    lat: e.latitude,
+                    lng: e.longitude,
+                    speed: e.speed,
+                    value: e.value
+                }));
+                await supaClient.from('sensor_events').delete().eq('trip_id', trip.id);
+                await supaClient.from('sensor_events').insert(payload);
+            }
+        }
+        return { success: true, count: trips.length };
+    }
+
+    async function restoreTripsFromCloud() {
+        const session = await getSession();
+        if (!session) throw new Error("Must be logged in to restore from cloud.");
+        const userId = session.user.id;
+
+        // Fetch user's trips
+        const { data: trips, error: tripsError } = await supaClient.from('trips').select('*').eq('user_id', userId);
+        if (tripsError) throw tripsError;
+        if (!trips || trips.length === 0) return { success: true, count: 0 };
+
+        console.log(`Found ${trips.length} trips in cloud. Restoring local...`);
+
+        for (const t of trips) {
+            // format trip object for IndexedDB
+            const localTrip = {
+                id: t.id,
+                date: t.date,
+                startTime: parseFloat(t.start_time),
+                endTime: parseFloat(t.end_time),
+                distance: parseFloat(t.distance),
+                duration: parseFloat(t.duration),
+                score: parseFloat(t.score),
+                route: t.route || [],
+                stats: t.stats || {}
+            };
+            await DB.saveTrip(localTrip);
+
+            // Fetch and Restore GPS
+            const { data: gpsData } = await supaClient.from('gps_points').select('*').eq('trip_id', t.id);
+            if (gpsData && gpsData.length > 0) {
+                for (const p of gpsData) {
+                    await DB.saveGPSPoint({
+                        tripId: t.id,
+                        latitude: p.latitude,
+                        longitude: p.longitude,
+                        speed: parseFloat(p.speed),
+                        altitude: parseFloat(p.altitude),
+                        accuracy: parseFloat(p.accuracy),
+                        timestamp: parseFloat(p.timestamp) // Keep exact numeric ms
+                    });
+                }
+            }
+
+            // Fetch and Restore Sensor Events
+            const { data: sensorData } = await supaClient.from('sensor_events').select('*').eq('trip_id', t.id);
+            if (sensorData && sensorData.length > 0) {
+                for (const e of sensorData) {
+                    await DB.saveSensorEvent({
+                        tripId: t.id,
+                        type: e.type,
+                        timestamp: parseFloat(e.timestamp),
+                        latitude: e.lat,
+                        longitude: e.lng,
+                        speed: parseFloat(e.speed),
+                        value: parseFloat(e.value)
+                    });
+                }
+            }
+        }
+        return { success: true, count: trips.length };
+    }
+
     return {
         isConfigured,
+        getSession,
+        login,
+        register,
+        logout,
         fetchGlobalEvents,
         pushEvent,
         pushEvents,
@@ -322,6 +388,9 @@ const SupabaseSync = (() => {
         deleteEvent,
         fullSync,
         startAutoSync,
-        stopAutoSync
+        stopAutoSync,
+        syncTripsToCloud,
+        restoreTripsFromCloud,
+        getSupabase: () => supaClient // exposed for custom calls
     };
 })();

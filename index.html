@@ -804,6 +804,44 @@
             <button class="delete-btn" id="clear-data-btn"><i class="fas fa-trash"></i></button>
           </div>
         </div>
+        <!-- Cloud Sync Management -->
+        <div class="settings-group">
+          <h3 class="settings-group-title">Cloud Backup</h3>
+          <div class="setting-item glass-card" style="display:flex;align-items:center;justify-content:space-between;">
+            <div class="setting-info" style="margin-bottom:0;">
+              <i class="fas fa-cloud-arrow-up" style="color:#00d4ff;"></i>
+              <div>
+                <span class="setting-label" id="sync-push-label">Sync to Cloud</span>
+                <span class="setting-desc">Backup local trips online</span>
+              </div>
+            </div>
+            <button class="primary-btn small" id="sync-push-btn" style="padding: 6px 12px;"><i
+                class="fas fa-arrow-up"></i></button>
+          </div>
+          <div class="setting-item glass-card" style="display:flex;align-items:center;justify-content:space-between;">
+            <div class="setting-info" style="margin-bottom:0;">
+              <i class="fas fa-cloud-arrow-down" style="color:#10b981;"></i>
+              <div>
+                <span class="setting-label" id="sync-pull-label">Restore from Cloud</span>
+                <span class="setting-desc">Download history to device</span>
+              </div>
+            </div>
+            <button class="primary-btn small" id="sync-pull-btn"
+              style="padding: 6px 12px; background: rgba(16,185,129,0.2); color:#10b981; border: 1px solid rgba(16,185,129,0.4);"><i
+                class="fas fa-arrow-down"></i></button>
+          </div>
+          <div class="setting-item glass-card danger"
+            style="display:flex;align-items:center;justify-content:space-between; cursor:pointer;" id="auth-logout-btn">
+            <div class="setting-info" style="margin-bottom:0;">
+              <i class="fas fa-sign-out-alt"></i>
+              <div>
+                <span class="setting-label">Log Out</span>
+                <span class="setting-desc">Sign out of your account</span>
+              </div>
+            </div>
+            <i class="fas fa-chevron-right" style="color:#ef4444; opacity: 0.5;"></i>
+          </div>
+        </div>
 
         <div class="settings-group">
           <h3 class="settings-group-title">About</h3>
@@ -819,6 +857,7 @@
             <i class="fas fa-chevron-right" style="color:#64748b;"></i>
           </div>
         </div>
+
       </div>
     </section>
 
@@ -1187,6 +1226,38 @@
       </div>
     </div>
   </div>
+  </div>
+
+  <!-- ===== AUTH MODAL ===== -->
+  <div class="modal-overlay" id="auth-modal" style="display:flex; background:rgba(10,14,26,0.98); z-index: 9999;">
+    <div class="modal glass-card" style="max-width:340px; margin:0 auto; padding: 32px 24px;">
+      <div style="text-align:center; margin-bottom: 24px;">
+        <h2 style="color:white; font-size:1.8rem; font-weight:800; margin-bottom: 8px;">Drive<span class="accent"
+            style="color:#00d4ff;">Pulse</span></h2>
+        <p style="color:#94a3b8; font-size:0.9rem;">Login or register to continue</p>
+      </div>
+      <div class="form-group" style="margin-bottom:16px;">
+        <label class="form-label" style="font-size:0.8rem;color:#94a3b8;margin-bottom:6px;display:block;">Email</label>
+        <input type="email" class="form-input" id="auth-email" placeholder="driver@drivepulse.com"
+          style="width:100%;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#e2e8f0;font-size:0.9rem;">
+      </div>
+      <div class="form-group" style="margin-bottom:24px;">
+        <label class="form-label"
+          style="font-size:0.8rem;color:#94a3b8;margin-bottom:6px;display:block;">Password</label>
+        <input type="password" class="form-input" id="auth-password" placeholder="••••••••"
+          style="width:100%;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#e2e8f0;font-size:0.9rem;">
+      </div>
+      <button class="primary-btn" id="auth-login-btn"
+        style="width:100%;padding:12px;border-radius:12px;font-size:0.9rem; margin-bottom: 12px; font-weight:600;">Log
+        In</button>
+      <button class="glass-card" id="auth-register-btn"
+        style="width:100%;padding:12px;border-radius:12px;font-size:0.9rem; border:1px solid rgba(255,255,255,0.15); background:transparent; color:#00d4ff; font-weight:600; cursor:pointer;">Register
+        New Account</button>
+      <div id="auth-error-msg"
+        style="color:#ef4444; font-size:0.8rem; text-align:center; margin-top:16px; display:none; min-height: 20px;">
+      </div>
+    </div>
+  </div>
 
   <!-- ===== TOAST ===== -->
   <div class="toast" id="toast">
@@ -1195,6 +1266,7 @@
   </div>
 
   <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
