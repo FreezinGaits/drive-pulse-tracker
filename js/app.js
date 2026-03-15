@@ -2052,32 +2052,45 @@
         const ctx = $('#infra-pothole-chart');
         if (!ctx) return;
 
+        // Force ensure we have numbers
+        const low = parseInt(stats.potholeSeverity.low) || 0;
+        const med = parseInt(stats.potholeSeverity.medium) || 0;
+        const high = parseInt(stats.potholeSeverity.high) || 0;
+
+        // If completely empty, show a grey placeholder
+        const isEmpty = (low + med + high) === 0;
+
         ui.charts.infraPothole = new Chart(ctx, {
             type: 'doughnut',
             data: {
-                labels: ['Low Severity', 'Medium Severity', 'High Severity'],
+                labels: isEmpty ? ['No Data'] : ['Low Severity', 'Medium Severity', 'High Severity'],
                 datasets: [{
-                    data: [
-                        stats.potholeSeverity.low,
-                        stats.potholeSeverity.medium,
-                        stats.potholeSeverity.high,
-                    ],
-                    backgroundColor: [
-                        'rgba(16,185,129,0.7)',
-                        'rgba(234,179,8,0.7)',
-                        'rgba(239,68,68,0.7)',
+                    data: isEmpty ? [1] : [low, med, high],
+                    backgroundColor: isEmpty ? ['rgba(255,255,255,0.05)'] : [
+                        '#fdba74', // Light Orange
+                        '#f97316', // Deep Orange
+                        '#ef4444', // Red
                     ],
                     borderColor: 'rgba(10,14,26,0.8)',
-                    borderWidth: 3,
+                    borderWidth: 2,
+                    hoverOffset: isEmpty ? 0 : 4
                 }],
             },
             options: {
-                responsive: true, maintainAspectRatio: true, cutout: '65%',
+                responsive: true, maintainAspectRatio: true, cutout: '70%',
                 plugins: {
                     legend: {
                         display: true, position: 'bottom',
-                        labels: { color: '#94a3b8', font: { family: 'Inter', size: 11 }, padding: 16, usePointStyle: true, pointStyle: 'circle' },
+                        labels: { color: '#94a3b8', font: { family: 'Inter', size: 11 }, padding: 12, usePointStyle: true, pointStyle: 'circle' }
                     },
+                    tooltip: {
+                        enabled: !isEmpty,
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                        titleFont: { family: 'Inter', size: 13 },
+                        bodyFont: { family: 'Inter', size: 13 },
+                        padding: 10,
+                        displayColors: true
+                    }
                 },
             },
         });
