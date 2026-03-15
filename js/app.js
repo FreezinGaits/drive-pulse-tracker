@@ -1967,12 +1967,9 @@
         }).join('');
     }
 
-    // DrivePulse global API
-    window.DrivePulse = {
-        Sensors,
-        DB,
-        UI: { openHazardModal }
-    };
+    // Export UI methods to DrivePulse global namespace
+    window.DrivePulse = window.DrivePulse || {};
+    window.DrivePulse.UI = { openHazardModal };
 
     document.addEventListener('DOMContentLoaded', initSplash);
 
