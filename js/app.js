@@ -1811,11 +1811,12 @@
         ui.infraMap.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
 
         const typeStyles = {
-            pothole: { low: '#fdba74', medium: '#f97316', high: '#c2410c', icon: '⚠️' },
-            road_quality: { low: '#fca5a5', medium: '#ef4444', high: '#b91c1c', icon: '🛣️' },
-            noise: { low: '#d8b4fe', medium: '#a855f7', high: '#7e22ce', icon: '🔊' },
-            traffic: { low: '#fde047', medium: '#eab308', high: '#a16207', icon: '🚦' },
-            dead_zone: { low: '#d1d5db', medium: '#6b7280', high: '#374151', icon: '📵' },
+            pothole: { low: '#fdba74', medium: '#f97316', high: '#c2410c', critical: '#9a3412', icon: '⚠️' },
+            road_quality: { low: '#fca5a5', medium: '#ef4444', high: '#b91c1c', critical: '#7f1d1d', icon: '🛣️' },
+            noise: { low: '#d8b4fe', medium: '#a855f7', high: '#7e22ce', critical: '#581c87', icon: '🔊' },
+            traffic: { low: '#fde047', medium: '#eab308', high: '#a16207', critical: '#713f12', icon: '🚦' },
+            dead_zone: { low: '#d1d5db', medium: '#6b7280', high: '#374151', critical: '#1f2937', icon: '📵' },
+            custom: { low: '#93c5fd', medium: '#3b82f6', high: '#1d4ed8', critical: '#1e3a8a', icon: '🏷️' },
         };
 
         const typeLabels = {
@@ -1824,13 +1825,13 @@
             noise: 'Noise Zone',
             traffic: 'Traffic',
             dead_zone: 'Dead Zone',
+            custom: 'Custom Report',
         };
 
         ui.infraMap.on('load', () => {
             validEvents.forEach(event => {
-                const styleObj = typeStyles[event.type] || { low: '#fff', medium: '#fff', high: '#fff', icon: '📍' };
-                const sevKey = event.severity === 'high' ? 'high' : (event.severity === 'low' ? 'low' : 'medium');
-                const markerColor = styleObj[sevKey];
+                const styleObj = typeStyles[event.type] || { low: '#ccc', medium: '#999', high: '#666', critical: '#333', icon: '📍' };
+                const markerColor = styleObj[event.severity] || styleObj.medium || '#999';
 
                 const radius = event.severity === 'high' ? 24 : event.severity === 'medium' ? 16 : 10;
                 const opacity = event.severity === 'high' ? 0.8 : event.severity === 'medium' ? 0.6 : 0.4;

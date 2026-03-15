@@ -2727,6 +2727,7 @@ body::before {
 .infra-event-icon.noise { background: rgba(168,85,247,0.15); color: #a855f7; }
 .infra-event-icon.traffic { background: rgba(234,179,8,0.15); color: #eab308; }
 .infra-event-icon.dead_zone { background: rgba(107,114,128,0.15); color: #6b7280; }
+.infra-event-icon.custom { background: rgba(59,130,246,0.15); color: #3b82f6; }
 
 .infra-event-info {
     flex: 1;
@@ -2758,6 +2759,7 @@ body::before {
 .infra-event-severity.low { background: rgba(16,185,129,0.15); color: #10b981; }
 .infra-event-severity.medium { background: rgba(234,179,8,0.15); color: #eab308; }
 .infra-event-severity.high { background: rgba(239,68,68,0.15); color: #ef4444; }
+.infra-event-severity.critical { background: rgba(153,27,27,0.15); color: #f87171; }
 
 /* Live Infrastructure Alert Toast */
 .infra-alert {
