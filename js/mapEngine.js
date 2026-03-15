@@ -138,35 +138,17 @@ const MapEngine = {
 
         map.on('load', async () => {
             MapLayers.initAllLayers(map);
+            this._layersReady = true;
             
-            // Collect all historical events from previous trips
-            let allEvents = [];
+            // Load infra events directly from IndexedDB infraEvents store
             try {
                 if (typeof DrivePulse !== 'undefined' && DrivePulse.DB) {
-                    const trips = await DrivePulse.DB.getAllTrips();
-                    trips.forEach(t => {
-                        if (t.events && Array.isArray(t.events)) {
-                            allEvents = allEvents.concat(t.events);
-                        }
-                    });
-                }
-            } catch(e) { console.warn('Coult not load historical DB events', e); }
-
-            // Add any live events from current active tracking session
-            if (typeof CityPulse !== 'undefined') {
-                CityPulse.getAggregatedStats().then(stats => {
-                    if (stats && stats.allEvents) {
-                        allEvents = allEvents.concat(stats.allEvents);
-                    }
-                    if (allEvents.length > 0) {
+                    const allEvents = await DrivePulse.DB.getAllInfraEvents();
+                    if (allEvents && allEvents.length > 0) {
                         MapLayers.updateInfraData(allEvents);
                     }
-                }).catch(() => {
-                    if (allEvents.length > 0) MapLayers.updateInfraData(allEvents);
-                });
-            } else if (allEvents.length > 0) {
-                MapLayers.updateInfraData(allEvents);
-            }
+                }
+            } catch(e) { console.warn('Could not load infra events from DB', e); }
         });
 
         // Handle manual hazard reporting
@@ -208,7 +190,18 @@ const MapEngine = {
             (pos) => {
                 const lng = pos.coords.longitude;
                 const lat = pos.coords.latitude;
+                // Skip (0,0) or clearly invalid coords
+                if (lng === 0 && lat === 0) return;
                 const heading = pos.coords.heading || this.userHeading;
+
+                // GPS drift filter: ignore tiny movements (<3m) to stop phantom drifting
+                if (this.userCoords) {
+                    const dLat = lat - this.userCoords.lat;
+                    const dLng = lng - this.userCoords.lng;
+                    const dist = Math.sqrt(dLat * dLat + dLng * dLng) * 111320; // approx meters
+                    if (dist < 3) return; // ignore sub-3-meter jitter
+                }
+
                 this.userCoords = { lng, lat };
                 this.userHeading = heading;
 
@@ -228,7 +221,7 @@ const MapEngine = {
                 }
             },
             (err) => console.warn('MapEngine GPS error:', err.message),
-            { enableHighAccuracy: true, maximumAge: 3000, timeout: 10000 }
+            { enableHighAccuracy: true, maximumAge: 3000, timeout: 15000 }
         );
     },
 
@@ -237,7 +230,7 @@ const MapEngine = {
         return new Promise((resolve, reject) => {
             if (!navigator.geolocation) return reject(new Error('No geolocation'));
             navigator.geolocation.getCurrentPosition(resolve, reject, {
-                enableHighAccuracy: true, timeout: 8000, maximumAge: 60000
+                enableHighAccuracy: true, timeout: 15000, maximumAge: 120000
             });
         });
     },
@@ -278,6 +271,10 @@ const MapEngine = {
     // ── Switch mode ──
     setMode(mode) {
         this.currentMode = mode;
+        const waitForLayers = (fn) => {
+            if (this._layersReady) { fn(); }
+            else { this.maps.live.once('load', fn); }
+        };
         switch(mode) {
             case 'driving':
                 this.drivingMode = true;
@@ -293,11 +290,13 @@ const MapEngine = {
                 this.setTheme('satellite');
                 break;
             case 'traffic':
-                MapLayers.toggleLayer('citypulse-heatmap', true);
+                waitForLayers(() => MapLayers.toggleLayer('citypulse-heatmap', true));
                 break;
             case 'infrastructure':
-                MapLayers.toggleLayer('clusters', true);
-                MapLayers.toggleLayer('unclustered-point', true);
+                waitForLayers(() => {
+                    MapLayers.toggleLayer('clusters', true);
+                    MapLayers.toggleLayer('unclustered-point', true);
+                });
                 break;
         }
     },

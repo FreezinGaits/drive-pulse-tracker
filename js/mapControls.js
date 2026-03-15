@@ -159,7 +159,11 @@ const MapControls = {
             $('#dp-btn-3d').classList.toggle('dp-active', buildings3dOn);
 
             if (buildings3dOn) {
-                map.easeTo({ pitch: 60, duration: 800 });
+                // Buildings need zoom >= 14 to render, bump to 15 if too far out
+                const currentZoom = map.getZoom();
+                const opts = { pitch: 60, duration: 800 };
+                if (currentZoom < 15) opts.zoom = 15;
+                map.easeTo(opts);
                 MapLayers.toggleLayer('building-3d', true);
             } else {
                 map.easeTo({ pitch: 0, duration: 800 });

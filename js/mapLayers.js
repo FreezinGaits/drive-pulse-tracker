@@ -301,18 +301,21 @@ const MapLayers = {
     toggleLayer(layerId, forceVisible) {
         const map = MapEngine.maps.live;
         if (!map) return;
-        try {
-            const currentVis = map.getLayoutProperty(layerId, 'visibility');
-            const newVis = forceVisible !== undefined ? (forceVisible ? 'visible' : 'none') : (currentVis === 'visible' ? 'none' : 'visible');
-            map.setLayoutProperty(layerId, 'visibility', newVis);
+        // Guard: layer must be initialized before we can toggle it
+        if (!map.getLayer(layerId)) {
+            console.warn('MapLayers.toggleLayer: layer "' + layerId + '" does not exist yet');
+            return;
+        }
+        const currentVis = map.getLayoutProperty(layerId, 'visibility') || 'none';
+        const newVis = forceVisible !== undefined ? (forceVisible ? 'visible' : 'none') : (currentVis === 'visible' ? 'none' : 'visible');
+        map.setLayoutProperty(layerId, 'visibility', newVis);
 
-            // Companion layers
-            if (layerId === 'clusters') {
-                map.setLayoutProperty('cluster-count', 'visibility', newVis);
-            }
-            if (layerId === 'building-3d') {
-                map.setLayoutProperty('road-3d-outline', 'visibility', newVis);
-            }
-        } catch(e) {}
+        // Companion layers
+        if (layerId === 'clusters' && map.getLayer('cluster-count')) {
+            map.setLayoutProperty('cluster-count', 'visibility', newVis);
+        }
+        if (layerId === 'building-3d' && map.getLayer('road-3d-outline')) {
+            map.setLayoutProperty('road-3d-outline', 'visibility', newVis);
+        }
     }
 };
