@@ -1846,10 +1846,10 @@
                 el.style.cursor = 'pointer';
 
                 const popupHtml = `
-                    <div style="font-family:'Inter',sans-serif;font-size:13px;padding:4px;color:#111;">
+                    <div style="font-family:'Inter',sans-serif;font-size:13px;padding:4px;color:#fff;">
                         <strong style="font-size:14px;">${styleObj.icon} ${typeLabels[event.type] || event.type}</strong><br>
-                        Severity: <b style="color:${markerColor};text-transform:capitalize;">${event.severity}</b><br>
-                        <span style="color:#666;font-size:11px;">${new Date(event.timestamp).toLocaleString()}</span>
+                        <span style="color:#ddd;">Severity:</span> <b style="color:${markerColor};text-transform:capitalize;">${event.severity}</b><br>
+                        <span style="color:#aaa;font-size:11px;">${new Date(event.timestamp).toLocaleString()}</span>
                     </div>
                 `;
 

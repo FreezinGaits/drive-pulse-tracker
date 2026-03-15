@@ -53,11 +53,18 @@ const MapControls = {
                 <button id="dp-btn-3d"     class="dp-ctrl-btn" title="3D Buildings"><i class="fas fa-cube"></i></button>
             </div>
 
-            <!-- Bottom Right Controls (Zoom, Compass, Offline, GPS) -->
-            <div class="dp-ctrl-group dp-bottom-right">
-                <button id="dp-btn-compass" class="dp-ctrl-btn" title="Reset North"><i class="fas fa-compass"></i></button>
-                <div style="display: flex; gap: 6px; flex-direction: row;">
-                    <button id="dp-btn-zoomin" class="dp-ctrl-btn" title="Zoom In"><i class="fas fa-plus"></i></button>
+            <!-- Bottom Left Report Button (Mobile Friendly) -->
+        <div class="dp-ctrl-group dp-bottom-left" style="position:absolute; bottom:20px; left:20px; z-index:100;">
+            <button id="dp-btn-report" class="dp-ctrl-btn" title="Report Hazard" style="background:var(--accent); color:#fff; width:48px; height:48px; border-radius:50%; box-shadow:0 4px 12px rgba(249,115,22,0.4); border:none;">
+                <i class="fas fa-exclamation-triangle" style="font-size:18px;"></i>
+            </button>
+        </div>
+
+        <!-- Bottom Right Controls (Zoom, Compass, Offline, GPS) -->
+        <div class="dp-ctrl-group dp-bottom-right">
+            <button id="dp-btn-compass" class="dp-ctrl-btn" title="Reset North"><i class="fas fa-compass"></i></button>
+            <div style="display: flex; gap: 6px; flex-direction: row;">
+                <button id="dp-btn-zoomin" class="dp-ctrl-btn" title="Zoom In"><i class="fas fa-plus"></i></button>
                     <button id="dp-btn-zoomout" class="dp-ctrl-btn" title="Zoom Out"><i class="fas fa-minus"></i></button>
                 </div>
                 <button id="dp-btn-offline" class="dp-ctrl-btn" title="Download Offline Map"><i class="fas fa-cloud-download-alt"></i></button>
@@ -190,6 +197,18 @@ const MapControls = {
 
         // ── GPS recenter ──
         $('#dp-btn-gps').addEventListener('click', () => MapEngine.recenter());
+
+        // ── Mobile Report Button ──
+        $('#dp-btn-report').addEventListener('click', () => {
+            if (typeof DrivePulse !== 'undefined' && DrivePulse.UI) {
+                // Get current map center coordinates to use as the reported location
+                const center = map.getCenter();
+                DrivePulse.UI.openHazardModal({
+                    lat: center.lat,
+                    lng: center.lng
+                });
+            }
+        });
 
         // ── Stop following on manual drag ──
         map.on('dragstart', () => { MapEngine.following = false; });

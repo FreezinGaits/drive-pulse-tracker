@@ -233,11 +233,12 @@ const MapLayers = {
             new maplibregl.Popup({ closeButton: true, className: 'dp-popup' })
                 .setLngLat(coords)
                 .setHTML(`
-                    <div style="font-family:'Inter',sans-serif;font-size:13px;padding:6px;">
+                    <div style="font-family:'Inter',sans-serif;font-size:13px;padding:6px;color:#fff;">
                         <strong style="font-size:15px;">${typeIcons[p.type]||'📍'} ${typeLabels[p.type]||p.type}</strong><br>
-                        <span style="color:#999;">Severity:</span> <b style="text-transform:capitalize;">${p.severity}</b><br>
-                        ${p.value ? `<span style="color:#999;">Value:</span> ${p.value}<br>` : ''}
-                        <span style="color:#999;">Confirmed:</span> ${p.confirmations||1} trip(s)
+                        <span style="color:#ddd;">Severity:</span> <b style="text-transform:capitalize;">${p.severity}</b><br>
+                        ${p.value ? `<span style="color:#ddd;">Value:</span> ${p.value}<br>` : ''}
+                        ${p.description ? `<span style="color:#ddd;">Desc:</span> ${p.description}<br>` : ''}
+                        <span style="color:#ddd;">Confirmed:</span> ${p.confirmations||1} trip(s)
                     </div>
                 `).addTo(map);
         });
