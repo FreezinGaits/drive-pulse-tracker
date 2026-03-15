@@ -4,7 +4,7 @@
    and background keep-alive.
    ============================================ */
 
-const CACHE_NAME = 'drivepulse-v4.11';
+const CACHE_NAME = 'drivepulse-v4.12';
 const ASSETS = [
     '/',
     '/index.html',

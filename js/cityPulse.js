@@ -593,9 +593,9 @@ DrivePulse.CityPulse = (function () {
         return {
             totalPotholes: potholes.length,
             potholeSeverity: {
-                low: potholes.filter(p => p.severity === 'low').length,
-                medium: potholes.filter(p => p.severity === 'medium').length,
-                high: potholes.filter(p => p.severity === 'high').length,
+                low: events.filter(e => e.severity === 'low').length,
+                medium: events.filter(e => e.severity === 'medium').length,
+                high: events.filter(e => e.severity === 'high' || e.severity === 'critical').length,
             },
             avgRoadScore,
             totalRoadSegments: segments.length,

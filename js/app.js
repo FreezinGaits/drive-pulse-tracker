@@ -2040,15 +2040,15 @@
         const healthEl = $('#infra-road-health');
         if (healthEl) healthEl.textContent = stats.avgRoadScore + '/100';
 
-        // Pothole severity chart
-        initPotholeChart(stats);
+        // Hazard severity chart
+        initHazardChart(stats);
 
         // Recent events list
         renderInfraEvents(stats.allEvents);
     }
 
-    function initPotholeChart(stats) {
-        if (ui.charts.infraPothole) ui.charts.infraPothole.destroy();
+    function initHazardChart(stats) {
+        if (ui.charts.infraHazard) ui.charts.infraHazard.destroy();
         const ctx = $('#infra-pothole-chart');
         if (!ctx) return;
 
@@ -2060,7 +2060,7 @@
         // If completely empty, show a grey placeholder
         const isEmpty = (low + med + high) === 0;
 
-        ui.charts.infraPothole = new Chart(ctx, {
+        ui.charts.infraHazard = new Chart(ctx, {
             type: 'doughnut',
             data: {
                 labels: isEmpty ? ['No Data'] : ['Low Severity', 'Medium Severity', 'High Severity'],
