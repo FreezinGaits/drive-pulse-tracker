@@ -1,7 +1,7 @@
 # DrivePulse: Smart Trip Tracker & Infrastructure Intelligence Network
 
 ## Overview
-**DrivePulse** is a cutting-edge Progressive Web Application (PWA) that transforms a standard smartphone into an advanced vehicle telemetry and city infrastructure monitoring device. Designed to operate **100% offline**, it processes real-time sensor data using edge computing to deliver insights into driving behavior while simultaneously crowdsourcing critical data about city infrastructure health (via the **CityPulse** module).
+**DrivePulse** is a cutting-edge Progressive Web Application (PWA) that transforms a standard smartphone into an advanced vehicle telemetry and city infrastructure monitoring device. Designed with an **Offline-First Cloud Architecture**, it processes real-time sensor data using edge computing to deliver insights into driving behavior while crowdsourcing critical city infrastructure health (via the **CityPulse** module) to a global Supabase backend.
 
 ---
 
@@ -27,11 +27,12 @@ DrivePulse solves these problems simultaneously without requiring any custom har
 ---
 
 ## Tech Stack
-DrivePulse is completely self-contained and operates without a backend database, making it highly scalable and privacy-respecting.
+DrivePulse is built as an offline-first PWA, utilizing a robust cloud synchronize strategy for long-term data persistence.
 
 *   **Frontend Core:** Vanilla JavaScript (ES6+), HTML5, and CSS3. (No heavy frameworks like React/Angular to ensure lightning-fast performance on low-end mobile browsers).
-*   **Storage:** **IndexedDB** for asynchronous, high-capacity, 100% offline data storage (storing telemetry arrays, GPS paths, and thousands of infrastructure events).
-*   **Mapping:** **Leaflet.js** integrated with CartoDB Dark Matter tiles.
+*   **Authentication & Cloud Sync:** **Supabase JS SDK** handles secure user authentication, Row Level Security (RLS) data isolation, and live global infrastructure mapping.
+*   **Storage (Edge):** **IndexedDB** for asynchronous, high-capacity, 100% offline data storage (storing telemetry arrays, GPS paths, and thousands of infrastructure events before pushing to the cloud).
+*   **Mapping:** **Leaflet.js** and **MapLibre GL JS** integrated with CartoDB Dark Matter tiles and OpenFreeMap 3D building vector tiles.
 *   **Data Visualization:** **Chart.js** for rendering speed, acceleration, and analytics graphs.
 *   **PWA Architecture:** Highly optimized Service Workers and Web Manifest for installability, offline caching, and native app-like experience.
 
@@ -106,8 +107,8 @@ A strict `Content-Security-Policy` meta tag is enforced in `index.html`. It rest
 ### XSS Prevention
 All dynamically rendered content (infrastructure event cards, map tooltips, popup details) passes through an HTML entity escaping function (`esc()`) before being injected via `innerHTML`. This prevents stored XSS attacks where a malicious value in IndexedDB could execute arbitrary JavaScript.
 
-### No Server, No Attack Surface
-There is no backend. No API keys. No user tokens. No authentication cookies. No data leaves the device. The entire attack surface is limited to the local browser sandbox.
+### Secure Cloud Backend (Supabase)
+DrivePulse utilizes a PostgreSQL Supabase backend protected by strict Row Level Security (RLS). Users must authenticate to push or pull private driving telemetry. Cloud infrastructure data (potholes, traffic) is pooled globally but attributed securely via session tokens. This ensures extreme data isolation where no user can query or modify another user's private trips.
 
 ### HTTPS Requirement
 In production, the app **must** be served over HTTPS. Without it, the browser will block:
@@ -118,11 +119,11 @@ In production, the app **must** be served over HTTPS. Without it, the browser wi
 
 ---
 
-## Data Storage & How to Access It
+## Data Storage & Cloud Synchronization
 
-All data is stored locally on the user's device using **IndexedDB**, a browser-native NoSQL database. No data is sent to any server.
+DrivePulse uses a dual-layer storage methodology: **Edge (IndexedDB)** for uninterrupted offline tracking, and **Cloud (Supabase)** for persistent backups, cross-device restoration, and live global infrastructure pinging.
 
-### Database: `DrivePulseDB` (Version 3)
+### 1. Edge Storage: `DrivePulseDB` (IndexedDB)
 
 | Store Name | Key | Contents | Access Pattern |
 |---|---|---|---|
@@ -173,10 +174,10 @@ location.reload();
 ## Frequently Asked Questions (Q&A)
 
 **Q: Does DrivePulse require an active internet connection to work?**
-A: **No.** The entire application is built offline-first. The HTML, CSS, JavaScript, and mapping logic are executed locally. Telemetry data, potholes, and noise events are written to the device's internal `IndexedDB`. When (and if) the user gets back online, the map tiles will simply load from the cache, or fetch new tiles if panning to a new area.
+A: **No.** The entire application is built offline-first. The HTML, CSS, JavaScript, and mapping logic are executed locally. Telemetry data, potholes, and noise events are queued to the device's internal `IndexedDB`. When the user gets back online, DrivePulse silently syncs the backed-up trips and event queues securely to the Supabase Cloud.
 
 **Q: How is user privacy maintained?**
-A: Because there is no backend server currently attached, **100% of the user's location data and driving habits remain on their personal device**. Even the CityPulse infrastructure data resides in the local browser database. If deployed in production as a crowdsourcing tool, infrastructure data points (like potholes) would be anonymized and decoupled from user IDs before being sent securely to an aggregation server.
+A: DrivePulse enforces PostgreSQL Row Level Security (RLS) via Supabase. A driver's raw telemetry (GPS points, exact speeds, braking metrics) is fundamentally locked to their specific authenticated `uuid`. Nobody—not even the application frontend without proper JWT tokens—can fetch another user's isolated trip routes. Global infrastructure intelligence is shared anonymously.
 
 **Q: Does this drain the smartphone battery?**
 A: Yes, tracking continuous 60Hz Accelerometer data and 1Hz GPS location data while keeping the screen awake is battery-intensive. It is highly recommended that users keep their phone plugged into a car charger while using DrivePulse for extended trips.
