@@ -201,12 +201,43 @@ const MapControls = {
         // ── Mobile Report Button ──
         $('#dp-btn-report').addEventListener('click', () => {
             if (typeof DrivePulse !== 'undefined' && DrivePulse.UI) {
-                // Get current map center coordinates to use as the reported location
-                const center = map.getCenter();
-                DrivePulse.UI.openHazardModal({
-                    lat: center.lat,
-                    lng: center.lng
-                });
+                
+                // Try to grab the live position from Sensors if currently tracking
+                const gps = typeof DrivePulse.Sensors !== 'undefined' ? DrivePulse.Sensors.getCurrentPosition() : null;
+                
+                if (gps && gps.latitude && gps.longitude && MapEngine.following) {
+                    DrivePulse.UI.openHazardModal({
+                        lat: gps.latitude,
+                        lng: gps.longitude
+                    });
+                } else {
+                    // Force a high-accuracy GPS check
+                    if (navigator.geolocation) {
+                        navigator.geolocation.getCurrentPosition(
+                            (pos) => {
+                                DrivePulse.UI.openHazardModal({
+                                    lat: pos.coords.latitude,
+                                    lng: pos.coords.longitude
+                                });
+                            },
+                            (err) => {
+                                // Worst-case fallback: map center
+                                const center = map.getCenter();
+                                DrivePulse.UI.openHazardModal({
+                                    lat: center.lat,
+                                    lng: center.lng
+                                });
+                            },
+                            { enableHighAccuracy: true, timeout: 7000, maximumAge: 0 }
+                        );
+                    } else {
+                        const center = map.getCenter();
+                        DrivePulse.UI.openHazardModal({
+                            lat: center.lat,
+                            lng: center.lng
+                        });
+                    }
+                }
             }
         });
 
