@@ -1903,20 +1903,28 @@
                 try {
                     const result = await DrivePulse.DemoData.loadDemoData();
                     showToast(`Demo loaded! ${result.events} events + ${result.segments} segments 🏙️`);
+                    
+                    // Push demo data to Supabase for global visibility
+                    if (typeof SupabaseSync !== 'undefined' && SupabaseSync.isConfigured()) {
+                        try {
+                            const allEvents = await DB.getAllInfraEvents();
+                            await SupabaseSync.pushEvents(allEvents);
+                            showToast('Demo data synced globally! 🌐');
+                        } catch(e) { console.warn('Could not sync demo data to Supabase', e); }
+                    }
+                    
                     // Refresh the infra dashboard
                     await renderInfraMap();
                     await updateInfraDashboard();
                     
-                    // Force the live tracking map to also display the new demo events if active
+                    // Force the live tracking map to also display the new demo events
                     if (typeof MapLayers !== 'undefined') {
                         try {
-                            const stats = await CityPulse.getAggregatedStats();
-                            if (stats && stats.allEvents) {
-                                MapLayers.updateInfraData(stats.allEvents);
-                                // Fly map to Ludhiana where demo data is generated
-                                if (MapEngine && MapEngine.maps.live) {
-                                    MapEngine.maps.live.flyTo({ center: [75.8530, 30.9030], zoom: 13, duration: 2500 });
-                                }
+                            const events = await DB.getAllInfraEvents();
+                            MapLayers.updateInfraData(events);
+                            // Fly map to Ludhiana where demo data is generated
+                            if (MapEngine && MapEngine.maps.live) {
+                                MapEngine.maps.live.flyTo({ center: [75.8530, 30.9030], zoom: 13, duration: 2500 });
                             }
                         } catch(e) {}
                     }

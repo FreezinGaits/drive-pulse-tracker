@@ -140,18 +140,28 @@ const MapEngine = {
             MapLayers.initAllLayers(map);
             this._layersReady = true;
             
-            // Load infra events directly from IndexedDB infraEvents store
+            // Load infra events: prefer Supabase (global), fallback to IndexedDB (local)
             try {
-                if (typeof DrivePulse !== 'undefined' && DrivePulse.DB) {
+                if (typeof SupabaseSync !== 'undefined' && SupabaseSync.isConfigured()) {
+                    // Fetch from global database
+                    const globalEvents = await SupabaseSync.fullSync();
+                    if (globalEvents.length > 0) {
+                        MapLayers.updateInfraData(globalEvents);
+                        console.log('🌐 Map loaded with global Supabase data');
+                    }
+                    // Start background auto-sync
+                    SupabaseSync.startAutoSync(120000); // every 2 min
+                } else if (typeof DrivePulse !== 'undefined' && DrivePulse.DB) {
+                    // Fallback: load from local IndexedDB
                     const allEvents = await DrivePulse.DB.getAllInfraEvents();
                     if (allEvents && allEvents.length > 0) {
                         MapLayers.updateInfraData(allEvents);
                     }
                 }
-            } catch(e) { console.warn('Could not load infra events from DB', e); }
+            } catch(e) { console.warn('Could not load infra events', e); }
         });
 
-        // Handle manual hazard reporting
+        // Handle manual hazard reporting (right-click / long-press)
         map.on('contextmenu', async (e) => {
             if (confirm('Report a road hazard at this location?')) {
                 const eventType = prompt('Type of hazard? (pothole, traffic, road_quality, dead_zone, noise)', 'pothole') || 'pothole';
@@ -165,10 +175,18 @@ const MapEngine = {
                     confirmations: 1
                 };
                 try {
+                    // Save locally
                     if (DrivePulse.DB) await DrivePulse.DB.saveInfraEvent(newEvent);
-                    showToast('📍 Hazard reported and marker placed!');
-                    const stats = await DrivePulse.CityPulse.getAggregatedStats();
-                    MapLayers.updateInfraData(stats.allEvents);
+                    
+                    // Push to global Supabase
+                    if (typeof SupabaseSync !== 'undefined' && SupabaseSync.isConfigured()) {
+                        await SupabaseSync.pushEvent(newEvent);
+                    }
+                    
+                    showToast('📍 Hazard reported globally!');
+                    // Refresh map with all events
+                    const events = await DrivePulse.DB.getAllInfraEvents();
+                    MapLayers.updateInfraData(events);
                 } catch(err) { console.warn(err); }
             }
         });
