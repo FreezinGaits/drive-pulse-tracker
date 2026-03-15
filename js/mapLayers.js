@@ -21,52 +21,54 @@ const MapLayers = {
     _init3DBuildings(map) {
         if (map.getSource('openmaptiles')) return;
 
-        // Add OpenFreeMap vector source for building data (CORS-friendly, free)
-        map.addSource('openmaptiles', {
-            type: 'vector',
-            tiles: [
-                'https://tiles.openfreemap.org/planet/{z}/{x}/{y}.pbf'
-            ],
-            minzoom: 0,
-            maxzoom: 14
-        });
+        try {
+            // Add OpenFreeMap vector source using their TileJSON endpoint (CORS-friendly, free)
+            map.addSource('openmaptiles', {
+                type: 'vector',
+                url: 'https://tiles.openfreemap.org/planet'
+            });
 
-        // 3D building extrusion layer (hidden by default)
-        map.addLayer({
-            id: 'building-3d',
-            type: 'fill-extrusion',
-            source: 'openmaptiles',
-            'source-layer': 'building',
-            minzoom: 14,
-            layout: { visibility: 'none' },
-            paint: {
-                'fill-extrusion-color': [
-                    'interpolate', ['linear'], ['coalesce', ['get', 'render_height'], ['get', 'height'], 15],
-                    0,  'rgba(60, 60, 80, 0.8)',
-                    20, 'rgba(80, 100, 140, 0.8)',
-                    50, 'rgba(100, 130, 180, 0.8)'
-                ],
-                'fill-extrusion-height': ['coalesce', ['get', 'render_height'], ['get', 'height'], 15],
-                'fill-extrusion-base': ['coalesce', ['get', 'render_min_height'], ['get', 'min_height'], 0],
-                'fill-extrusion-opacity': 0.7
-            }
-        });
+            // 3D building extrusion layer (hidden by default)
+            map.addLayer({
+                id: 'building-3d',
+                type: 'fill-extrusion',
+                source: 'openmaptiles',
+                'source-layer': 'building',
+                minzoom: 14,
+                layout: { visibility: 'none' },
+                paint: {
+                    'fill-extrusion-color': [
+                        'interpolate', ['linear'], ['coalesce', ['get', 'render_height'], 15],
+                        0,  'rgba(60, 60, 80, 0.8)',
+                        20, 'rgba(80, 100, 140, 0.8)',
+                        50, 'rgba(100, 130, 180, 0.8)'
+                    ],
+                    'fill-extrusion-height': ['coalesce', ['get', 'render_height'], 15],
+                    'fill-extrusion-base': ['coalesce', ['get', 'render_min_height'], 0],
+                    'fill-extrusion-opacity': 0.7
+                }
+            });
 
-        // Road outlines for 3D context
-        map.addLayer({
-            id: 'road-3d-outline',
-            type: 'line',
-            source: 'openmaptiles',
-            'source-layer': 'transportation',
-            minzoom: 14,
-            layout: { visibility: 'none', 'line-join': 'round', 'line-cap': 'round' },
-            filter: ['in', 'class', 'motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'street'],
-            paint: {
-                'line-color': 'rgba(0, 212, 255, 0.15)',
-                'line-width': ['interpolate', ['linear'], ['zoom'], 14, 1, 18, 4],
-                'line-opacity': 0.6
-            }
-        });
+            // Road outlines for 3D context
+            map.addLayer({
+                id: 'road-3d-outline',
+                type: 'line',
+                source: 'openmaptiles',
+                'source-layer': 'transportation',
+                minzoom: 14,
+                layout: { visibility: 'none', 'line-join': 'round', 'line-cap': 'round' },
+                filter: ['in', 'class', 'motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'street'],
+                paint: {
+                    'line-color': 'rgba(0, 212, 255, 0.15)',
+                    'line-width': ['interpolate', ['linear'], ['zoom'], 14, 1, 18, 4],
+                    'line-opacity': 0.6
+                }
+            });
+
+            console.log('✅ 3D buildings layer initialized successfully');
+        } catch(e) {
+            console.warn('⚠️ Could not initialize 3D buildings:', e.message);
+        }
     },
 
     // ── Vehicle Marker (custom animated) ──
