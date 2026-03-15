@@ -169,6 +169,28 @@ const MapEngine = {
             }
         });
 
+        // Handle manual hazard reporting
+        map.on('contextmenu', async (e) => {
+            if (confirm('Report a road hazard at this location?')) {
+                const eventType = prompt('Type of hazard? (pothole, traffic, road_quality, dead_zone, noise)', 'pothole') || 'pothole';
+                const newEvent = {
+                    type: eventType.toLowerCase(),
+                    lat: e.lngLat.lat,
+                    lng: e.lngLat.lng,
+                    severity: 'medium',
+                    value: 'User Reported',
+                    timestamp: Date.now(),
+                    confirmations: 1
+                };
+                try {
+                    if (DrivePulse.DB) await DrivePulse.DB.saveInfraEvent(newEvent);
+                    showToast('📍 Hazard reported and marker placed!');
+                    const stats = await DrivePulse.CityPulse.getAggregatedStats();
+                    MapLayers.updateInfraData(stats.allEvents);
+                } catch(err) { console.warn(err); }
+            }
+        });
+
         // Attach floating controls
         MapControls.attach(map, containerId);
 

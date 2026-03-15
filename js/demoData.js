@@ -195,10 +195,7 @@ DrivePulse.DemoData = (function () {
 
     // ===== LOAD ALL DEMO DATA =====
     async function loadDemoData() {
-        console.log('🏙️ CityPulse: Loading demo data...');
-
-        // Clear any existing infra data first
-        await DB.clearInfraEvents();
+        console.log('🧪 CityPulse: Loading demo data...');
 
         const allEvents = [
             ...generatePotholes(28),

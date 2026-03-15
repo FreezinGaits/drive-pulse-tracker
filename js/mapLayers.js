@@ -41,13 +41,13 @@ const MapLayers = {
             layout: { visibility: 'none' },
             paint: {
                 'fill-extrusion-color': [
-                    'interpolate', ['linear'], ['get', 'render_height'],
+                    'interpolate', ['linear'], ['coalesce', ['get', 'render_height'], ['get', 'height'], 15],
                     0,  'rgba(60, 60, 80, 0.8)',
                     20, 'rgba(80, 100, 140, 0.8)',
                     50, 'rgba(100, 130, 180, 0.8)'
                 ],
-                'fill-extrusion-height': ['coalesce', ['get', 'render_height'], 10],
-                'fill-extrusion-base': ['coalesce', ['get', 'render_min_height'], 0],
+                'fill-extrusion-height': ['coalesce', ['get', 'render_height'], ['get', 'height'], 15],
+                'fill-extrusion-base': ['coalesce', ['get', 'render_min_height'], ['get', 'min_height'], 0],
                 'fill-extrusion-opacity': 0.7
             }
         });

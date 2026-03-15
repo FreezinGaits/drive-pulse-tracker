@@ -841,6 +841,18 @@
     // TRIP DETAIL
     // ============================================
     async function showTripDetail(trip) {
+        // Fetch GPS points incrementally so map shows the path
+        if (!trip.route) {
+            try {
+                const points = await DB.getGPSPoints(trip.id);
+                if (points && points.length > 0) {
+                    trip.route = points.map(p => [p.longitude, p.latitude]);
+                } else if (trip.startLocation && trip.endLocation) {
+                    trip.route = [[trip.startLocation.lng, trip.startLocation.lat], [trip.endLocation.lng, trip.endLocation.lat]];
+                }
+            } catch(e) {}
+        }
+
         const dateObj = new Date(trip.startTime);
         const endObj = new Date(trip.endTime);
         const title = trip.title || generateTripTitle(trip);

@@ -43,7 +43,6 @@ const MapControls = {
                 <div class="dp-layer-toggle" data-layer="heatmap"><i class="fas fa-fire"></i> Heatmap</div>
                 <div class="dp-layer-toggle" data-layer="markers"><i class="fas fa-map-pin"></i> Markers</div>
                 <div class="dp-layer-toggle" data-layer="route"><i class="fas fa-route"></i> Route Trail</div>
-                <div class="dp-layer-toggle" data-layer="buildings"><i class="fas fa-building"></i> 3D Buildings</div>
             </div>
 
             <!-- Top Right Controls (Theme, Mode, Layers, 3D) -->
@@ -57,10 +56,12 @@ const MapControls = {
             <!-- Bottom Right Controls (Zoom, Compass, Offline, GPS) -->
             <div class="dp-ctrl-group dp-bottom-right">
                 <button id="dp-btn-compass" class="dp-ctrl-btn" title="Reset North"><i class="fas fa-compass"></i></button>
-                <button id="dp-btn-zoomin" class="dp-ctrl-btn" title="Zoom In"><i class="fas fa-plus"></i></button>
-                <button id="dp-btn-zoomout" class="dp-ctrl-btn" title="Zoom Out"><i class="fas fa-minus"></i></button>
-                <button id="dp-btn-offline" class="dp-ctrl-btn dp-accent" title="Cache Region"><i class="fas fa-download"></i></button>
-                <button id="dp-btn-gps"    class="dp-ctrl-btn dp-gps" title="Recenter GPS"><i class="fas fa-location-crosshairs"></i></button>
+                <div style="display: flex; gap: 6px; flex-direction: row;">
+                    <button id="dp-btn-zoomin" class="dp-ctrl-btn" title="Zoom In"><i class="fas fa-plus"></i></button>
+                    <button id="dp-btn-zoomout" class="dp-ctrl-btn" title="Zoom Out"><i class="fas fa-minus"></i></button>
+                </div>
+                <button id="dp-btn-offline" class="dp-ctrl-btn" title="Download Offline Map"><i class="fas fa-cloud-download-alt"></i></button>
+                <button id="dp-btn-gps"     class="dp-ctrl-btn pulse" title="Center on GPS"><i class="fas fa-location-arrow"></i></button>
             </div>
         `;
 
