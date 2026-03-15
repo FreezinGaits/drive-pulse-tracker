@@ -76,7 +76,6 @@
         initProfileModal();
         initPermissionFlow();
         initInfraFilterChips();
-        initInfraDemoButton();
 
         // Register trip engine callbacks
         TripEngine.on('tripStart', handleTripStarted);
@@ -427,17 +426,6 @@
         if (screenName === 'history') loadAndRenderTrips();
         if (screenName === 'infra') {
             setTimeout(async () => {
-                // Auto-load demo data if no infra events exist
-                if (DrivePulse.DemoData && DrivePulse.DemoData.isAvailable) {
-                    try {
-                        const existing = await DB.getAllInfraEvents();
-                        if (existing.length === 0) {
-                            showToast('Loading CityPulse demo data... 🏙️');
-                            await DrivePulse.DemoData.loadDemoData();
-                            showToast('Demo data loaded! 71 events + 45 segments ✅');
-                        }
-                    } catch (e) { console.warn('Demo load check failed:', e); }
-                }
                 renderInfraMap();
                 updateInfraDashboard();
             }, 300);
@@ -594,12 +582,19 @@
     }
 
     async function handleInfraEvent(event) {
-        // Re-fetch all active infra events and update MapLibre GeoJSON data source
-        if (typeof MapLayers !== 'undefined' && typeof CityPulse !== 'undefined') {
+        // Push the real detection to Supabase (global)
+        if (typeof SupabaseSync !== 'undefined' && SupabaseSync.isConfigured()) {
             try {
-                const stats = await CityPulse.getAggregatedStats();
-                if (stats && stats.allEvents) {
-                    MapLayers.updateInfraData(stats.allEvents);
+                await SupabaseSync.pushEvent(event);
+            } catch(e) { console.warn('Could not push infra event to Supabase', e); }
+        }
+
+        // Update the map with all local events
+        if (typeof MapLayers !== 'undefined') {
+            try {
+                const events = await DB.getAllInfraEvents();
+                if (events && events.length > 0) {
+                    MapLayers.updateInfraData(events);
                 }
             } catch(e) {}
         }
@@ -1891,56 +1886,12 @@
         }).join('');
     }
 
-    // ============================================
-    // DEMO DATA
-    // ============================================
-    function initInfraDemoButton() {
-        const btn = $('#load-demo-infra-btn');
-        if (btn) {
-            btn.addEventListener('click', async () => {
-                btn.disabled = true;
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
-                try {
-                    const result = await DrivePulse.DemoData.loadDemoData();
-                    showToast(`Demo loaded! ${result.events} events + ${result.segments} segments 🏙️`);
-                    
-                    // Push demo data to Supabase for global visibility
-                    if (typeof SupabaseSync !== 'undefined' && SupabaseSync.isConfigured()) {
-                        try {
-                            const allEvents = await DB.getAllInfraEvents();
-                            await SupabaseSync.pushEvents(allEvents);
-                            showToast('Demo data synced globally! 🌐');
-                        } catch(e) { console.warn('Could not sync demo data to Supabase', e); }
-                    }
-                    
-                    // Refresh the infra dashboard
-                    await renderInfraMap();
-                    await updateInfraDashboard();
-                    
-                    // Force the live tracking map to also display the new demo events
-                    if (typeof MapLayers !== 'undefined') {
-                        try {
-                            const events = await DB.getAllInfraEvents();
-                            MapLayers.updateInfraData(events);
-                            // Fly map to Ludhiana where demo data is generated
-                            if (MapEngine && MapEngine.maps.live) {
-                                MapEngine.maps.live.flyTo({ center: [75.8530, 30.9030], zoom: 13, duration: 2500 });
-                            }
-                        } catch(e) {}
-                    }
-                } catch (e) {
-                    showToast('Failed to load demo data');
-                    console.error(e);
-                }
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-flask"></i> Load Demo Data for Preview';
-            });
-        }
-    }
+    // DrivePulse global API
+    window.DrivePulse = {
+        Sensors,
+        DB,
+    };
 
-    // ============================================
-    // INIT
-    // ============================================
     document.addEventListener('DOMContentLoaded', initSplash);
 
 })();

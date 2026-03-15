@@ -12,8 +12,8 @@ const SupabaseSync = (() => {
     // ═══════════════════════════════════════════
     // CONFIGURATION — Replace with your Supabase project values
     // ═══════════════════════════════════════════
-    const SUPABASE_URL = 'YOUR_SUPABASE_URL';       // e.g. https://xxxxxxxxxxxx.supabase.co
-    const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY'; // The anon (public) key — safe for frontend
+    const SUPABASE_URL = 'https://eowglcxngpiivyrcwsve.supabase.co';       // e.g. https://xxxxxxxxxxxx.supabase.co
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVvd2dsY3huZ3BpaXZ5cmN3c3ZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1NTc3OTgsImV4cCI6MjA4OTEzMzc5OH0.6Ry-cZlDqR9JiUlovXNcW8Z3lFDoDwEC6NBXx3osrMQ'; // The anon (public) key — safe for frontend
 
     const TABLE = 'infra_events';
     let _initialized = false;
