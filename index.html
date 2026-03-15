@@ -940,6 +940,8 @@
               Traffic</button>
             <button class="infra-filter-chip" data-infra-filter="dead_zone"><i class="fas fa-signal"></i>
               Signal</button>
+            <button class="infra-filter-chip" data-infra-filter="custom"><i class="fas fa-tag"></i>
+              Custom</button>
           </div>
           <div id="infra-map" class="infra-map"></div>
         </div>
@@ -1180,13 +1182,74 @@
           <button class="share-action-btn" id="share-download"><i class="fas fa-download"></i> Download</button>
           <button class="share-action-btn" id="share-copy"><i class="fas fa-copy"></i> Copy</button>
           <button class="share-action-btn whatsapp"><i class="fab fa-whatsapp"></i> WhatsApp</button>
-          <button class="share-action-btn twitter"><i class="fab fa-x-twitter"></i> Twitter</button>
+          <button class="share-action-btn twitter">
+            <i class="fab fa-x-twitter"></i> Twitter
+          </button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ===== REPORT HAZARD MODAL ===== -->
+  <!-- ===== INFRA EVENT DETAILS MODAL ===== -->
+  <div class="modal-overlay" id="infra-details-modal">
+    <div class="modal glass-card">
+      <div class="modal-header">
+        <h3>Report Details</h3>
+        <button class="modal-close" id="infra-details-close"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body" style="font-family: 'Inter', sans-serif;">
+        <div style="margin-bottom: 12px;">
+          <strong style="color: #94a3b8; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">Hazard
+            Category</strong>
+          <div id="infra-details-type" style="font-size: 16px; font-weight: 600; margin-top: 4px; color: white;">--
+          </div>
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <strong style="color: #94a3b8; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">User Input
+            / Name</strong>
+          <div id="infra-details-value" style="font-size: 16px; font-weight: 600; margin-top: 4px; color: white;">--
+          </div>
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <strong
+            style="color: #94a3b8; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">Description</strong>
+          <div id="infra-details-desc"
+            style="font-size: 15px; margin-top: 4px; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); color: #ddd;">
+            --</div>
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <strong
+            style="color: #94a3b8; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">Severity</strong>
+          <div id="infra-details-severity"
+            style="font-size: 15px; font-weight: 500; margin-top: 4px; text-transform: capitalize;">--</div>
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <strong style="color: #94a3b8; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">Location
+            Coordinates</strong>
+          <div id="infra-details-coords"
+            style="font-size: 14px; margin-top: 4px; font-family: monospace; color: #00d4ff;">--</div>
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <strong style="color: #94a3b8; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">Reported
+            On</strong>
+          <div id="infra-details-time" style="font-size: 14px; margin-top: 4px; color: #aaa;">--</div>
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <strong style="color: #94a3b8; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">Reported
+            By</strong>
+          <div id="infra-details-author" style="font-size: 14px; margin-top: 4px; color: #aaa;">--</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== HAZARD REPORTING MODAL ===== -->
   <div class="modal-overlay" id="hazard-modal">
     <div class="modal glass-card" style="max-width:340px; margin:0 auto;">
       <div class="modal-header">

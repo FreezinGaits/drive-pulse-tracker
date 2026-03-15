@@ -578,9 +578,14 @@ DrivePulse.CityPulse = (function () {
         const roadQuality = events.filter(e => e.type === 'road_quality');
 
         // Calculate avg road quality
-        const avgRoadScore = segments.length > 0
-            ? Math.round(segments.reduce((s, seg) => s + seg.score, 0) / segments.length)
-            : 100;
+        let avgRoadScore = 100;
+        if (segments.length > 0) {
+            avgRoadScore = Math.round(segments.reduce((s, seg) => s + seg.score, 0) / segments.length);
+        } else {
+            // Deduce from global events directly if local segment cache is empty
+            const penalty = (potholes.length * 2) + (roadQuality.length * 5);
+            avgRoadScore = Math.max(0, 100 - penalty);
+        }
 
         // Total km monitored
         const totalKm = segments.reduce((s, seg) => s + (seg.distance || 0), 0);

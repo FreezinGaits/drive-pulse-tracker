@@ -1976,7 +1976,7 @@
 
                 const popupHtml = `
                     <div style="font-family:'Inter',sans-serif;font-size:13px;padding:4px;color:#fff;">
-                        <strong style="font-size:14px;">${styleObj.icon} ${typeLabels[event.type] || event.type}</strong><br>
+                        <strong style="font-size:14px;">${styleObj.icon} ${event.type === 'custom' ? (event.value || 'Custom Report') : (typeLabels[event.type] || event.type)}</strong><br>
                         <span style="color:#ddd;">Severity:</span> <b style="color:${markerColor};text-transform:capitalize;">${event.severity}</b><br>
                         <span style="color:#aaa;font-size:11px;">${new Date(event.timestamp).toLocaleString()}</span>
                     </div>
@@ -2110,10 +2110,10 @@
         // Sanitize function to prevent XSS from stored data
         const esc = (str) => String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
-        list.innerHTML = sorted.map(event => {
+        list.innerHTML = sorted.map((event, idx) => {
             const cfg = typeConfig[event.type] || { icon: 'fa-circle', label: event.type };
             const timeAgo = formatTimeAgo(event.timestamp);
-            return `<div class="infra-event-card">
+            return `<div class="infra-event-card" data-idx="${idx}" style="cursor:pointer">
                 <div class="infra-event-icon ${esc(event.type)}">
                     <i class="fas ${esc(cfg.icon)}"></i>
                 </div>
@@ -2124,6 +2124,33 @@
                 <span class="infra-event-severity ${esc(event.severity)}">${esc(event.severity)}</span>
             </div>`;
         }).join('');
+
+        // Attach click listeners for detail modal
+        const cards = list.querySelectorAll('.infra-event-card');
+        cards.forEach(card => {
+            card.addEventListener('click', () => {
+                const ev = sorted[parseInt(card.getAttribute('data-idx'))];
+                openInfraDetailsModal(ev);
+            });
+        });
+    }
+
+    function openInfraDetailsModal(event) {
+        const modal = $('#infra-details-modal');
+        if (!modal) return;
+        $('#infra-details-type').textContent = event.type;
+        $('#infra-details-value').textContent = event.value || 'N/A';
+        $('#infra-details-desc').textContent = event.description || 'No additional description provided.';
+        
+        const sevEl = $('#infra-details-severity');
+        sevEl.textContent = event.severity;
+        sevEl.style.color = event.severity === 'high' ? '#ef4444' : event.severity === 'medium' ? '#f97316' : '#10b981';
+
+        $('#infra-details-coords').textContent = `${parseFloat(event.lat).toFixed(6)}, ${parseFloat(event.lng).toFixed(6)}`;
+        $('#infra-details-time').textContent = new Date(event.timestamp).toLocaleString();
+        $('#infra-details-author').textContent = event.reported_by || 'Anonymous';
+
+        modal.classList.add('active');
     }
 
     // Safely extend the DrivePulse namespace with UI methods
@@ -2131,8 +2158,18 @@
     if (typeof window.DrivePulse === 'undefined') window.DrivePulse = {};
     window.DrivePulse.Sensors = Sensors;
     window.DrivePulse.DB = DB;
-    window.DrivePulse.UI = { openHazardModal };
+    window.DrivePulse.UI = { openHazardModal, openInfraDetailsModal };
 
-    document.addEventListener('DOMContentLoaded', initSplash);
+    document.addEventListener('DOMContentLoaded', () => {
+        initSplash();
+        
+        // Wire up detail modal close buttons
+        $('#infra-details-close')?.addEventListener('click', () => {
+            $('#infra-details-modal').classList.remove('active');
+        });
+        $('#infra-details-modal')?.addEventListener('click', (e) => {
+            if (e.target.id === 'infra-details-modal') e.target.classList.remove('active');
+        });
+    });
 
 })();
