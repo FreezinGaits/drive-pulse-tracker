@@ -21,11 +21,11 @@ const MapLayers = {
     _init3DBuildings(map) {
         if (map.getSource('openmaptiles')) return;
 
-        // Add OpenMapTiles vector source for building data
+        // Add OpenFreeMap vector source for building data (CORS-friendly, free)
         map.addSource('openmaptiles', {
             type: 'vector',
             tiles: [
-                'https://tiles.basemaps.cartocdn.com/vectortiles/carto.streets/v1/{z}/{x}/{y}.mvt'
+                'https://tiles.openfreemap.org/planet/{z}/{x}/{y}.pbf'
             ],
             minzoom: 0,
             maxzoom: 14
@@ -83,12 +83,18 @@ const MapLayers = {
                 <div class="dp-vehicle-arrow"></div>
             </div>
         `;
+        // Hide until first real GPS fix arrives
+        el.style.display = 'none';
+        this._vehicleEl = el;
+        this._vehicleVisible = false;
 
+        // Place at map center initially (not 0,0!)
+        const center = map.getCenter();
         this.vehicleMarker = new maplibregl.Marker({
             element: el,
             rotationAlignment: 'map',
             pitchAlignment: 'map'
-        }).setLngLat([0, 0]).addTo(map);
+        }).setLngLat([center.lng, center.lat]).addTo(map);
     },
 
     // ── Live Route Layer (animated polyline) ──
@@ -253,6 +259,11 @@ const MapLayers = {
     // ── Update vehicle position + heading rotation ──
     updateVehiclePosition(lng, lat, heading) {
         if (this.vehicleMarker) {
+            // Show marker on first real GPS fix
+            if (!this._vehicleVisible && this._vehicleEl) {
+                this._vehicleEl.style.display = '';
+                this._vehicleVisible = true;
+            }
             this.vehicleMarker.setLngLat([lng, lat]);
             if (heading !== null && heading !== undefined && !isNaN(heading)) {
                 this.vehicleMarker.setRotation(heading);
