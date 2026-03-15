@@ -552,7 +552,15 @@ DrivePulse.CityPulse = (function () {
     }
 
     async function getAggregatedStats() {
-        const rawEvents = await DB.getAllInfraEvents();
+        let rawEvents;
+        if (typeof SupabaseSync !== 'undefined' && SupabaseSync.isConfigured()) {
+            // Live fetch directly from global cloud
+            rawEvents = await SupabaseSync.fetchGlobalEvents();
+        } else {
+            // Fallback to local offline cache
+            rawEvents = await DB.getAllInfraEvents();
+        }
+        
         const rawSegments = await DB.getAllRoadSegments();
 
         const now = Date.now();
