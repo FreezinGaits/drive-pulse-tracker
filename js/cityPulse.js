@@ -605,6 +605,8 @@ DrivePulse.CityPulse = (function () {
             poorRoads: roadQuality.length,
             totalKmMonitored: parseFloat(totalKm.toFixed(1)),
             totalIssues: events.length,
+            highPriorityCount: events.filter(e => e.severity === 'high' || e.severity === 'critical').length,
+            activeMonitors: [...new Set(events.filter(e => e.reported_by).map(e => e.reported_by))].length || 1,
             allEvents: events,
             allSegments: segments,
         };

@@ -1998,14 +1998,17 @@
         const stats = await CityPulse.getAggregatedStats();
 
         // Overview cards
-        const potholeEl = $('#infra-potholes');
-        if (potholeEl) potholeEl.textContent = stats.totalPotholes;
+        const priorityEl = $('#infra-high-priority');
+        if (priorityEl) priorityEl.textContent = stats.highPriorityCount;
+        
         const roadScoreEl = $('#infra-road-score');
-        if (roadScoreEl) roadScoreEl.textContent = stats.avgRoadScore + '/100';
-        const noiseEl = $('#infra-noise');
-        if (noiseEl) noiseEl.textContent = stats.noiseZones;
-        const trafficEl = $('#infra-traffic');
-        if (trafficEl) trafficEl.textContent = stats.trafficSlowdowns;
+        if (roadScoreEl) roadScoreEl.textContent = stats.avgRoadScore + '%';
+        
+        const monitorsEl = $('#infra-active-monitors');
+        if (monitorsEl) monitorsEl.textContent = stats.activeMonitors;
+        
+        const totalIntelEl = $('#infra-total-intel');
+        if (totalIntelEl) totalIntelEl.textContent = stats.totalIssues;
 
         // Breakdown bars
         const total = Math.max(stats.totalIssues, 1);
