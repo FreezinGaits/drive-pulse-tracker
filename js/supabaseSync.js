@@ -165,6 +165,55 @@ const SupabaseSync = (() => {
     }
 
     // ═══════════════════════════════════════════
+    // UPDATE: Modify an existing event (Confirmations, Decay)
+    // ═══════════════════════════════════════════
+    async function updateEvent(id, updates) {
+        if (!isConfigured() || typeof id !== 'string') return false; // Ensure it's a Supabase UUID string
+
+        try {
+            const resp = await fetch(apiUrl(`${TABLE}?id=eq.${id}`), {
+                method: 'PATCH',
+                headers: headers(),
+                body: JSON.stringify(updates)
+            });
+
+            if (!resp.ok) {
+                console.warn('SupabaseSync: Update failed', resp.status);
+                return false;
+            }
+            console.log(`🔄 SupabaseSync: Event ${id} updated globally`);
+            return true;
+        } catch (e) {
+            console.warn('SupabaseSync: Update error', e.message);
+            return false;
+        }
+    }
+
+    // ═══════════════════════════════════════════
+    // DELETE: Remove an event globally (Smooth passes / Auto-healing)
+    // ═══════════════════════════════════════════
+    async function deleteEvent(id) {
+        if (!isConfigured() || typeof id !== 'string') return false;
+
+        try {
+            const resp = await fetch(apiUrl(`${TABLE}?id=eq.${id}`), {
+                method: 'DELETE',
+                headers: headers()
+            });
+
+            if (!resp.ok) {
+                console.warn('SupabaseSync: Delete failed', resp.status);
+                return false;
+            }
+            console.log(`🗑️ SupabaseSync: Event ${id} permanently deleted globally (Healed!)`);
+            return true;
+        } catch (e) {
+            console.warn('SupabaseSync: Delete error', e.message);
+            return false;
+        }
+    }
+
+    // ═══════════════════════════════════════════
     // OFFLINE QUEUE: Store failed pushes for retry
     // ═══════════════════════════════════════════
     const QUEUE_KEY = 'drivepulse_sync_queue';
@@ -269,6 +318,8 @@ const SupabaseSync = (() => {
         fetchGlobalEvents,
         pushEvent,
         pushEvents,
+        updateEvent,
+        deleteEvent,
         fullSync,
         startAutoSync,
         stopAutoSync

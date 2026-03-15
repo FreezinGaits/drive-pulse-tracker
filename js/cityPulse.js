@@ -197,6 +197,14 @@ DrivePulse.CityPulse = (function () {
                             // Save the updated confidence back to DB
                             DB.saveInfraEvent(existing).catch(() => {});
                             
+                            // Synchronize updates to global Supabase
+                            if (typeof SupabaseSync !== 'undefined' && SupabaseSync.isConfigured() && typeof existing.id === 'string') {
+                                SupabaseSync.updateEvent(existing.id, {
+                                    confirmations: existing.confirmations,
+                                    severity: existing.severity
+                                });
+                            }
+                            
                             if (callbacks.onInfraEvent) callbacks.onInfraEvent(existing);
                             if (callbacks.onAlert) callbacks.onAlert({
                                 message: `⚠️ Verified Hazard area! (${existing.confirmations} reports)`,
@@ -301,10 +309,20 @@ DrivePulse.CityPulse = (function () {
                         if (pothole.smoothPasses >= 2) {
                             // 2 smooth passes over an old pothole = Mathematically resolved!
                             DB.deleteInfraEvent(pothole.id).catch(() => {});
+                            
+                            // Permanently delete from global Supabase Network
+                            if (typeof SupabaseSync !== 'undefined' && SupabaseSync.isConfigured() && typeof pothole.id === 'string') {
+                                SupabaseSync.deleteEvent(pothole.id);
+                            }
+                            
                             state.activePotholes.splice(i, 1);
                         } else {
                             // Save vote progress
                             DB.saveInfraEvent(pothole).catch(() => {});
+                            
+                            // Sync the smooth pass increment so we don't lose progress if device closes
+                            // (If you want you can add a `smooth_passes` column on Supabase to track this globally, 
+                            // otherwise it just relies on local tracking till the delete is fired)
                         }
                     }
                 }
@@ -506,6 +524,10 @@ DrivePulse.CityPulse = (function () {
     async function saveAndNotify(event, alertMessage) {
         try {
             await DB.saveInfraEvent(event);
+            // Push new auto-detected event to Supabase
+            if (typeof SupabaseSync !== 'undefined' && SupabaseSync.isConfigured()) {
+                SupabaseSync.pushEvent(event);
+            }
         } catch (e) {
             console.warn('CityPulse: Failed to save infra event:', e);
         }
