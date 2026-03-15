@@ -163,31 +163,11 @@ const MapEngine = {
 
         // Handle manual hazard reporting (right-click / long-press)
         map.on('contextmenu', async (e) => {
-            if (confirm('Report a road hazard at this location?')) {
-                const eventType = prompt('Type of hazard? (pothole, traffic, road_quality, dead_zone, noise)', 'pothole') || 'pothole';
-                const newEvent = {
-                    type: eventType.toLowerCase(),
+            if (typeof DrivePulse !== 'undefined' && DrivePulse.UI && DrivePulse.UI.openHazardModal) {
+                DrivePulse.UI.openHazardModal({
                     lat: e.lngLat.lat,
-                    lng: e.lngLat.lng,
-                    severity: 'medium',
-                    value: 'User Reported',
-                    timestamp: Date.now(),
-                    confirmations: 1
-                };
-                try {
-                    // Save locally
-                    if (DrivePulse.DB) await DrivePulse.DB.saveInfraEvent(newEvent);
-                    
-                    // Push to global Supabase
-                    if (typeof SupabaseSync !== 'undefined' && SupabaseSync.isConfigured()) {
-                        await SupabaseSync.pushEvent(newEvent);
-                    }
-                    
-                    showToast('📍 Hazard reported globally!');
-                    // Refresh map with all events
-                    const events = await DrivePulse.DB.getAllInfraEvents();
-                    MapLayers.updateInfraData(events);
-                } catch(err) { console.warn(err); }
+                    lng: e.lngLat.lng
+                });
             }
         });
 

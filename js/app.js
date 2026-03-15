@@ -74,6 +74,7 @@
         initPeriodChips();
         initNotificationPanel();
         initProfileModal();
+        initHazardModal();
         initPermissionFlow();
         initInfraFilterChips();
 
@@ -210,6 +211,86 @@
             modal.classList.remove('active');
             showToast('Profile updated!');
         });
+    }
+
+    // ============================================
+    // HAZARD REPORTING MODAL 
+    // ============================================
+    let _pendingHazardCoords = null;
+
+    function initHazardModal() {
+        const modal = $('#hazard-modal');
+        const closeBtn = $('#hazard-modal-close');
+        const submitBtn = $('#hazard-submit-btn');
+
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                modal.classList.remove('active');
+                _pendingHazardCoords = null;
+            });
+        }
+
+        if (submitBtn) {
+            submitBtn.addEventListener('click', async () => {
+                if (!_pendingHazardCoords) return;
+
+                const category = $('#hazard-category').value;
+                const desc = $('#hazard-desc').value.trim();
+                const profile = await DB.getProfile();
+
+                const newEvent = {
+                    type: category,
+                    lat: _pendingHazardCoords.lat,
+                    lng: _pendingHazardCoords.lng,
+                    severity: 'low', // default for 1 single report
+                    value: desc || 'User Reported',
+                    timestamp: Date.now(),
+                    confirmations: 1,
+                    reported_by: profile.email
+                };
+
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Reporting...';
+
+                try {
+                    // Save locally
+                    await DB.saveInfraEvent(newEvent);
+                    // Push to global Supabase
+                    if (typeof SupabaseSync !== 'undefined' && SupabaseSync.isConfigured()) {
+                        await SupabaseSync.pushEvent(newEvent);
+                    }
+                    showToast('📍 Hazard reported globally!');
+                    const events = await DB.getAllInfraEvents();
+                    if (typeof MapLayers !== 'undefined') MapLayers.updateInfraData(events);
+                } catch(err) {
+                    console.warn(err);
+                    showToast('Failed to report hazard.');
+                }
+
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Report Globally';
+                modal.classList.remove('active');
+                _pendingHazardCoords = null;
+                $('#hazard-desc').value = ''; // clear input
+            });
+        }
+    }
+
+    async function openHazardModal(coords) {
+        const profile = await DB.getProfile();
+        
+        // 1. Mandatory Email Check
+        if (!profile || !profile.email || !profile.email.includes('@')) {
+            showToast('⚠️ Please set a valid email in your profile before reporting hazards.');
+            setTimeout(() => {
+                $('#profile-modal').classList.add('active');
+            }, 1000);
+            return;
+        }
+
+        // 2. Open standard custom modal
+        _pendingHazardCoords = coords;
+        $('#hazard-modal').classList.add('active');
     }
 
     // ============================================
@@ -1890,6 +1971,7 @@
     window.DrivePulse = {
         Sensors,
         DB,
+        UI: { openHazardModal }
     };
 
     document.addEventListener('DOMContentLoaded', initSplash);

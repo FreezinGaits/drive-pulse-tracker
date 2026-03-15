@@ -58,17 +58,26 @@ const SupabaseSync = (() => {
 
             const data = await resp.json();
             console.log(`🌐 SupabaseSync: Fetched ${data.length} global infra events`);
-            return data.map(row => ({
-                id: row.id,
-                type: row.type,
-                lat: row.lat,
-                lng: row.lng,
-                severity: row.severity,
-                value: row.value || '',
-                confirmations: row.confirmations || 1,
-                timestamp: new Date(row.created_at).getTime(),
-                source: 'global'
-            }));
+            return data.map(row => {
+                const conf = row.confirmations || 1;
+                let dynamicSeverity = 'low';
+                if (conf >= 10) dynamicSeverity = 'critical';
+                else if (conf >= 5) dynamicSeverity = 'high';
+                else if (conf >= 2) dynamicSeverity = 'medium';
+
+                return {
+                    id: row.id,
+                    type: row.type,
+                    lat: row.lat,
+                    lng: row.lng,
+                    severity: dynamicSeverity,
+                    value: row.value || '',
+                    confirmations: conf,
+                    reported_by: row.reported_by || 'anonymous',
+                    timestamp: new Date(row.created_at).getTime(),
+                    source: 'global'
+                };
+            });
         } catch (e) {
             console.warn('SupabaseSync: Fetch error (offline?)', e.message);
             return [];
@@ -89,7 +98,7 @@ const SupabaseSync = (() => {
                 severity: event.severity || 'medium',
                 value: event.value || '',
                 confirmations: event.confirmations || 1,
-                reported_by: 'anonymous'
+                reported_by: event.reported_by || 'anonymous'
             };
 
             const resp = await fetch(apiUrl(TABLE), {
@@ -129,7 +138,7 @@ const SupabaseSync = (() => {
                 severity: e.severity || 'medium',
                 value: e.value || '',
                 confirmations: e.confirmations || 1,
-                reported_by: 'anonymous'
+                reported_by: e.reported_by || 'anonymous'
             }));
 
             const resp = await fetch(apiUrl(TABLE), {

@@ -1134,6 +1134,36 @@
     </div>
   </div>
 
+  <!-- ===== REPORT HAZARD MODAL ===== -->
+  <div class="modal" id="hazard-modal">
+    <div class="modal-content glass-card" style="max-width:350px;">
+      <div class="modal-header">
+        <h3>Report Road Hazard</h3>
+        <button class="modal-close" id="hazard-modal-close"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Hazard Category <span style="color:#ef4444">*</span></label>
+          <select class="form-input" id="hazard-category">
+            <option value="pothole">Pothole</option>
+            <option value="traffic">Traffic Jam / Blockage</option>
+            <option value="road_quality">Poor Road Quality</option>
+            <option value="dead_zone">Network Dead Zone</option>
+            <option value="noise">High Noise Levels</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description / Custom Hazard</label>
+          <input type="text" class="form-input" id="hazard-desc"
+            placeholder="e.g. Broken traffic light, deep crater...">
+        </div>
+        <button class="primary-btn" id="hazard-submit-btn" style="width:100%;margin-top:10px;">
+          <i class="fas fa-exclamation-triangle"></i> Report Globally
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== TOAST ===== -->
   <div class="toast" id="toast">
     <i class="fas fa-check-circle"></i>
