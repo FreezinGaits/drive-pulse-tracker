@@ -214,83 +214,107 @@
     }
 
     // ============================================
-    // HAZARD REPORTING MODAL 
+    // HAZARD REPORTING MODAL
     // ============================================
     let _pendingHazardCoords = null;
 
     function initHazardModal() {
         const modal = $('#hazard-modal');
+        if (!modal) return;
+
+        const typeSelect = $('#hazard-type');
+        const customGroup = $('#hazard-custom-group');
         const closeBtn = $('#hazard-modal-close');
         const submitBtn = $('#hazard-submit-btn');
 
+        // Show/hide custom name field based on dropdown
+        if (typeSelect && customGroup) {
+            typeSelect.addEventListener('change', () => {
+                customGroup.style.display = typeSelect.value === 'custom' ? 'block' : 'none';
+            });
+        }
+
+        // Close modal
         if (closeBtn) {
             closeBtn.addEventListener('click', () => {
                 modal.classList.remove('active');
                 _pendingHazardCoords = null;
             });
         }
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) { modal.classList.remove('active'); _pendingHazardCoords = null; }
+        });
 
+        // Submit hazard report
         if (submitBtn) {
             submitBtn.addEventListener('click', async () => {
                 if (!_pendingHazardCoords) return;
 
-                const category = $('#hazard-category').value;
-                const desc = $('#hazard-desc').value.trim();
+                const category = typeSelect.value;
+                const customName = $('#hazard-custom-name')?.value.trim() || '';
+                const desc = $('#hazard-desc')?.value.trim() || '';
+
+                // Validate custom hazard name
+                if (category === 'custom' && !customName) {
+                    showToast('Please enter a name for the custom hazard.');
+                    return;
+                }
+
                 const profile = await DB.getProfile();
+                const email = (profile && profile.email) ? profile.email : 'anonymous';
 
                 const newEvent = {
                     type: category,
                     lat: _pendingHazardCoords.lat,
                     lng: _pendingHazardCoords.lng,
-                    severity: 'low', // default for 1 single report
-                    value: desc || 'User Reported',
+                    severity: 'low',
+                    value: category === 'custom' ? customName : 'User Reported',
+                    description: desc,
                     timestamp: Date.now(),
                     confirmations: 1,
-                    reported_by: profile.email
+                    reported_by: email
                 };
 
                 submitBtn.disabled = true;
                 submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Reporting...';
 
                 try {
-                    // Save locally
                     await DB.saveInfraEvent(newEvent);
-                    // Push to global Supabase
                     if (typeof SupabaseSync !== 'undefined' && SupabaseSync.isConfigured()) {
                         await SupabaseSync.pushEvent(newEvent);
                     }
-                    showToast('📍 Hazard reported globally!');
+                    showToast('\ud83d\udccd Hazard reported globally!');
                     const events = await DB.getAllInfraEvents();
                     if (typeof MapLayers !== 'undefined') MapLayers.updateInfraData(events);
-                } catch(err) {
-                    console.warn(err);
+                } catch (err) {
+                    console.warn('Hazard report failed:', err);
                     showToast('Failed to report hazard.');
                 }
 
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Report Globally';
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Report Globally';
                 modal.classList.remove('active');
                 _pendingHazardCoords = null;
-                $('#hazard-desc').value = ''; // clear input
+                if ($('#hazard-custom-name')) $('#hazard-custom-name').value = '';
+                if ($('#hazard-desc')) $('#hazard-desc').value = '';
+                if (typeSelect) { typeSelect.value = 'pothole'; customGroup.style.display = 'none'; }
             });
         }
     }
 
-    async function openHazardModal(coords) {
-        const profile = await DB.getProfile();
-        
-        // 1. Mandatory Email Check
-        if (!profile || !profile.email || !profile.email.includes('@')) {
-            showToast('⚠️ Please set a valid email in your profile before reporting hazards.');
-            setTimeout(() => {
-                $('#profile-modal').classList.add('active');
-            }, 1000);
-            return;
-        }
-
-        // 2. Open standard custom modal
-        _pendingHazardCoords = coords;
-        $('#hazard-modal').classList.add('active');
+    function openHazardModal(coords) {
+        // Check email
+        DB.getProfile().then(profile => {
+            if (!profile || !profile.email || !profile.email.includes('@')) {
+                showToast('\u26a0\ufe0f Set a valid email in your profile first.');
+                const pm = $('#profile-modal');
+                if (pm) setTimeout(() => pm.classList.add('active'), 800);
+                return;
+            }
+            _pendingHazardCoords = coords;
+            const modal = $('#hazard-modal');
+            if (modal) modal.classList.add('active');
+        });
     }
 
     // ============================================
@@ -1874,6 +1898,11 @@
         setCount('infra-count-traffic', stats.trafficSlowdowns);
         setCount('infra-count-signal', stats.deadZones);
 
+        // Custom hazards breakdown
+        const customCount = stats.allEvents ? stats.allEvents.filter(e => e.type === 'custom').length : 0;
+        setBar('infra-bar-custom', customCount);
+        setCount('infra-count-custom', customCount);
+
         // Community impact
         const kmEl = $('#infra-km-monitored');
         if (kmEl) kmEl.textContent = stats.totalKmMonitored + ' km';
@@ -1944,6 +1973,7 @@
             noise: { icon: 'fa-volume-high', label: 'Noise Pollution' },
             traffic: { icon: 'fa-traffic-light', label: 'Traffic Congestion' },
             dead_zone: { icon: 'fa-signal', label: 'Network Dead Zone' },
+            custom: { icon: 'fa-flag', label: 'Custom Report' },
         };
 
         const sorted = [...events].sort((a, b) => b.timestamp - a.timestamp).slice(0, 20);
@@ -1967,8 +1997,11 @@
         }).join('');
     }
 
-    // Export UI methods to DrivePulse global namespace
-    window.DrivePulse = window.DrivePulse || {};
+    // Safely extend the DrivePulse namespace with UI methods
+    // (DrivePulse is already defined by db.js / sensors.js etc.)
+    if (typeof window.DrivePulse === 'undefined') window.DrivePulse = {};
+    window.DrivePulse.Sensors = Sensors;
+    window.DrivePulse.DB = DB;
     window.DrivePulse.UI = { openHazardModal };
 
     document.addEventListener('DOMContentLoaded', initSplash);

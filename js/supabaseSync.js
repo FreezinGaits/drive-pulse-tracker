@@ -59,19 +59,21 @@ const SupabaseSync = (() => {
             const data = await resp.json();
             console.log(`🌐 SupabaseSync: Fetched ${data.length} global infra events`);
             return data.map(row => {
+                // Dynamic severity based on confirmations count
                 const conf = row.confirmations || 1;
-                let dynamicSeverity = 'low';
-                if (conf >= 10) dynamicSeverity = 'critical';
-                else if (conf >= 5) dynamicSeverity = 'high';
-                else if (conf >= 2) dynamicSeverity = 'medium';
+                let severity = 'low';
+                if (conf >= 10) severity = 'critical';
+                else if (conf >= 5) severity = 'high';
+                else if (conf >= 2) severity = 'medium';
 
                 return {
                     id: row.id,
                     type: row.type,
                     lat: row.lat,
                     lng: row.lng,
-                    severity: dynamicSeverity,
+                    severity: severity,
                     value: row.value || '',
+                    description: row.description || '',
                     confirmations: conf,
                     reported_by: row.reported_by || 'anonymous',
                     timestamp: new Date(row.created_at).getTime(),
@@ -97,6 +99,7 @@ const SupabaseSync = (() => {
                 lng: event.lng,
                 severity: event.severity || 'medium',
                 value: event.value || '',
+                description: event.description || '',
                 confirmations: event.confirmations || 1,
                 reported_by: event.reported_by || 'anonymous'
             };
@@ -137,6 +140,7 @@ const SupabaseSync = (() => {
                 lng: e.lng,
                 severity: e.severity || 'medium',
                 value: e.value || '',
+                description: e.description || '',
                 confirmations: e.confirmations || 1,
                 reported_by: e.reported_by || 'anonymous'
             }));

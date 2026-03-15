@@ -162,8 +162,8 @@ const MapEngine = {
         });
 
         // Handle manual hazard reporting (right-click / long-press)
-        map.on('contextmenu', async (e) => {
-            if (typeof DrivePulse !== 'undefined' && DrivePulse.UI && DrivePulse.UI.openHazardModal) {
+        map.on('contextmenu', (e) => {
+            if (typeof DrivePulse !== 'undefined' && DrivePulse.UI) {
                 DrivePulse.UI.openHazardModal({
                     lat: e.lngLat.lat,
                     lng: e.lngLat.lng

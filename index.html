@@ -973,6 +973,19 @@
             </div>
             <span class="infra-breakdown-count" id="infra-count-signal">0</span>
           </div>
+          <div class="infra-breakdown-item">
+            <div class="infra-breakdown-icon" style="background:rgba(59,130,246,0.15);color:#3b82f6;">
+              <i class="fas fa-flag"></i>
+            </div>
+            <div class="infra-breakdown-info">
+              <span class="infra-breakdown-label">Custom Reports</span>
+              <div class="infra-breakdown-bar-container">
+                <div class="infra-breakdown-bar" id="infra-bar-custom" style="--bar-width:0%;--bar-color:#3b82f6;">
+                </div>
+              </div>
+            </div>
+            <span class="infra-breakdown-count" id="infra-count-custom">0</span>
+          </div>
         </div>
 
         <!-- Community Impact -->
@@ -1136,29 +1149,40 @@
 
   <!-- ===== REPORT HAZARD MODAL ===== -->
   <div class="modal" id="hazard-modal">
-    <div class="modal-content glass-card" style="max-width:350px;">
+    <div class="modal-content glass-card" style="max-width:340px;">
       <div class="modal-header">
-        <h3>Report Road Hazard</h3>
+        <h3><i class="fas fa-exclamation-triangle" style="color:#f97316;margin-right:6px;"></i> Report Hazard</h3>
         <button class="modal-close" id="hazard-modal-close"><i class="fas fa-times"></i></button>
       </div>
-      <div class="modal-body">
-        <div class="form-group">
-          <label class="form-label">Hazard Category <span style="color:#ef4444">*</span></label>
-          <select class="form-input" id="hazard-category">
-            <option value="pothole">Pothole</option>
-            <option value="traffic">Traffic Jam / Blockage</option>
-            <option value="road_quality">Poor Road Quality</option>
-            <option value="dead_zone">Network Dead Zone</option>
-            <option value="noise">High Noise Levels</option>
+      <div class="modal-body" style="padding:16px 20px 20px;">
+        <div class="form-group" style="margin-bottom:12px;">
+          <label class="form-label" style="font-size:0.78rem;color:#94a3b8;margin-bottom:4px;display:block;">Hazard Type
+            <span style="color:#ef4444">*</span></label>
+          <select class="form-input" id="hazard-type"
+            style="width:100%;padding:8px 10px;border-radius:8px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#e2e8f0;font-size:0.85rem;">
+            <option value="pothole">🕳️ Pothole</option>
+            <option value="traffic">🚦 Traffic Jam / Blockage</option>
+            <option value="road_quality">🛣️ Poor Road Quality</option>
+            <option value="dead_zone">📵 Network Dead Zone</option>
+            <option value="noise">🔊 High Noise Levels</option>
+            <option value="custom">🏷️ Custom Hazard...</option>
           </select>
         </div>
-        <div class="form-group">
-          <label class="form-label">Description / Custom Hazard</label>
-          <input type="text" class="form-input" id="hazard-desc"
-            placeholder="e.g. Broken traffic light, deep crater...">
+        <div class="form-group" id="hazard-custom-group" style="margin-bottom:12px;display:none;">
+          <label class="form-label" style="font-size:0.78rem;color:#94a3b8;margin-bottom:4px;display:block;">Custom
+            Hazard Name <span style="color:#ef4444">*</span></label>
+          <input type="text" class="form-input" id="hazard-custom-name" placeholder="e.g. Broken traffic light"
+            style="width:100%;padding:8px 10px;border-radius:8px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#e2e8f0;font-size:0.85rem;">
         </div>
-        <button class="primary-btn" id="hazard-submit-btn" style="width:100%;margin-top:10px;">
-          <i class="fas fa-exclamation-triangle"></i> Report Globally
+        <div class="form-group" style="margin-bottom:14px;">
+          <label class="form-label" style="font-size:0.78rem;color:#94a3b8;margin-bottom:4px;display:block;">Description
+            <span style="color:#475569;font-size:0.7rem;">(optional)</span></label>
+          <input type="text" class="form-input" id="hazard-desc" placeholder="Any extra details..."
+            style="width:100%;padding:8px 10px;border-radius:8px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#e2e8f0;font-size:0.85rem;">
+        </div>
+        <button class="primary-btn" id="hazard-submit-btn"
+          style="width:100%;padding:10px;border-radius:10px;font-size:0.85rem;">
+          <i class="fas fa-paper-plane"></i> Report Globally
         </button>
       </div>
     </div>
