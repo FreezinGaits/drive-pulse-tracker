@@ -4,7 +4,7 @@
    and background keep-alive.
    ============================================ */
 
-const CACHE_NAME = 'drivepulse-v4.15';
+const CACHE_NAME = 'drivepulse-v4.16';
 const ASSETS = [
     '/',
     '/index.html',
@@ -16,6 +16,7 @@ const ASSETS = [
     '/js/cityPulse.js',
     '/js/data.js',
     '/js/tileManager.js',
+    '/js/config.js',
     '/js/supabaseSync.js',
     '/js/mapLayers.js',
     '/js/mapControls.js',
