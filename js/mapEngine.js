@@ -139,6 +139,11 @@ const MapEngine = {
         map.on('load', async () => {
             MapLayers.initAllLayers(map);
             this._layersReady = true;
+
+            // Make marker visible immediately at the estimated starting center
+            if (this.userCoords) {
+                MapLayers.updateVehiclePosition(this.userCoords.lng, this.userCoords.lat, 0);
+            }
             
             // Load infra events: prefer Supabase (global), fallback to IndexedDB (local)
             try {
