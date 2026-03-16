@@ -157,35 +157,58 @@
         if (!SupabaseSync.isConfigured()) return;
 
         const authModal = $('#auth-modal');
+        const loginForm = $('#auth-login-form');
+        const registerForm = $('#auth-register-form');
+        const tabLogin = $('#auth-tab-login');
+        const tabRegister = $('#auth-tab-register');
         const loginBtn = $('#auth-login-btn');
         const registerBtn = $('#auth-register-btn');
-        const emailInput = $('#auth-email');
-        const passwordInput = $('#auth-password');
         const errorMsg = $('#auth-error-msg');
         const logoutBtn = $('#auth-logout-btn');
 
         const session = await SupabaseSync.getSession();
-        
+
         if (session) {
-            authModal.style.display = 'none'; // Logged in, hide blocker
-            SupabaseSync.startAutoSync(); // Start global map sync
+            authModal.style.display = 'none';
+            SupabaseSync.startAutoSync();
         } else {
-            authModal.style.display = 'flex'; // Block the screen
+            authModal.style.display = 'flex';
         }
 
+        // Tab switching
+        tabLogin?.addEventListener('click', () => {
+            loginForm.style.display = 'block';
+            registerForm.style.display = 'none';
+            tabLogin.style.background = 'rgba(0,212,255,0.15)';
+            tabLogin.style.color = '#00d4ff';
+            tabRegister.style.background = 'transparent';
+            tabRegister.style.color = '#64748b';
+            errorMsg.style.display = 'none';
+        });
+
+        tabRegister?.addEventListener('click', () => {
+            loginForm.style.display = 'none';
+            registerForm.style.display = 'block';
+            tabRegister.style.background = 'rgba(0,212,255,0.15)';
+            tabRegister.style.color = '#00d4ff';
+            tabLogin.style.background = 'transparent';
+            tabLogin.style.color = '#64748b';
+            errorMsg.style.display = 'none';
+        });
+
+        // LOGIN
         loginBtn?.addEventListener('click', async () => {
-            const email = emailInput.value.trim();
-            const password = passwordInput.value;
-            if(!email || !password) return showAuthError("Email and password required");
-            
-            loginBtn.textContent = 'Logging in...';
+            const email = $('#auth-login-email').value.trim();
+            const password = $('#auth-login-password').value;
+            if (!email || !password) return showAuthError("All fields are required.");
+
+            loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>&nbsp; Logging in...';
             loginBtn.disabled = true;
             try {
                 await SupabaseSync.login(email, password);
                 authModal.style.display = 'none';
-                SupabaseSync.startAutoSync(); // Fetch global infra maps immediately
+                SupabaseSync.startAutoSync();
                 showToast("Logged in successfully!");
-                // Restore their profile email to local storage settings
                 const prof = await DB.getProfile();
                 prof.email = email;
                 await DB.saveProfile(prof);
@@ -193,43 +216,59 @@
             } catch (err) {
                 showAuthError(err.message);
             }
-            loginBtn.textContent = 'Log In';
+            loginBtn.innerHTML = '<i class="fas fa-right-to-bracket"></i>&nbsp; Log In';
             loginBtn.disabled = false;
         });
 
+        // REGISTER
         registerBtn?.addEventListener('click', async () => {
-            const email = emailInput.value.trim();
-            const password = passwordInput.value;
-            if(!email || !password) return showAuthError("Email and password required");
-            
-            registerBtn.textContent = 'Registering...';
+            const name = $('#auth-reg-name').value.trim();
+            const email = $('#auth-reg-email').value.trim();
+            const password = $('#auth-reg-password').value;
+            const vehicle = $('#auth-reg-vehicle').value.trim();
+            const vehicleType = $('#auth-reg-vehicle-type').value;
+
+            if (!name || !email || !password || !vehicle || !vehicleType) {
+                return showAuthError("All fields are mandatory. Please fill everything.");
+            }
+            if (password.length < 6) {
+                return showAuthError("Password must be at least 6 characters.");
+            }
+
+            registerBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>&nbsp; Creating Account...';
             registerBtn.disabled = true;
             try {
                 await SupabaseSync.register(email, password);
                 authModal.style.display = 'none';
-                SupabaseSync.startAutoSync(); // Fetch global infra maps immediately
-                showToast("Account created!");
+                SupabaseSync.startAutoSync();
+                showToast("Account created successfully!");
+
+                // Save profile data locally
                 const prof = await DB.getProfile();
+                prof.name = name;
                 prof.email = email;
+                prof.vehicle = vehicle;
+                prof.vehicleType = vehicleType;
                 await DB.saveProfile(prof);
                 await loadProfile();
             } catch (err) {
                 showAuthError(err.message);
             }
-            registerBtn.textContent = 'Register New Account';
+            registerBtn.innerHTML = '<i class="fas fa-user-plus"></i>&nbsp; Create Account';
             registerBtn.disabled = false;
         });
 
+        // LOGOUT (in settings)
         logoutBtn?.addEventListener('click', async () => {
-             if (confirm("Are you sure you want to log out?")) {
-                 await SupabaseSync.logout();
-                 location.reload(); // Hard reload the PWA to reset states
-             }
+            if (confirm("Are you sure you want to log out?")) {
+                await SupabaseSync.logout();
+                location.reload();
+            }
         });
 
         function showAuthError(msg) {
-             errorMsg.textContent = msg;
-             errorMsg.style.display = 'block';
+            errorMsg.textContent = msg;
+            errorMsg.style.display = 'block';
         }
     }
 

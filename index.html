@@ -1291,34 +1291,124 @@
   </div>
   </div>
 
-  <!-- ===== AUTH MODAL ===== -->
-  <div class="modal-overlay" id="auth-modal" style="display:flex; background:rgba(10,14,26,0.98); z-index: 9999;">
-    <div class="modal glass-card" style="max-width:340px; margin:0 auto; padding: 32px 24px;">
-      <div style="text-align:center; margin-bottom: 24px;">
-        <h2 style="color:white; font-size:1.8rem; font-weight:800; margin-bottom: 8px;">Drive<span class="accent"
-            style="color:#00d4ff;">Pulse</span></h2>
-        <p style="color:#94a3b8; font-size:0.9rem;">Login or register to continue</p>
+  <!-- ===== AUTH MODAL (BLOCKING) ===== -->
+  <div id="auth-modal"
+    style="display:none; position:fixed; inset:0; z-index:99999; background:rgba(6,8,18,0.97); backdrop-filter:blur(20px); align-items:center; justify-content:center; font-family:'Inter',sans-serif;">
+    <div style="width:100%; max-width:400px; margin:0 auto; padding:24px;">
+      <!-- Logo -->
+      <div style="text-align:center; margin-bottom:28px;">
+        <div
+          style="width:64px; height:64px; border-radius:50%; background:linear-gradient(135deg,#00d4ff,#0088ff); display:flex; align-items:center; justify-content:center; margin:0 auto 16px; box-shadow:0 0 30px rgba(0,212,255,0.3);">
+          <i class="fas fa-car-side" style="font-size:28px; color:white;"></i>
+        </div>
+        <h1 style="color:white; font-size:1.8rem; font-weight:800; margin:0;">Drive<span
+            style="color:#00d4ff;">Pulse</span></h1>
+        <p style="color:#64748b; font-size:0.85rem; margin-top:4px;">Smart Trip Tracker & Infrastructure Intelligence
+        </p>
       </div>
-      <div class="form-group" style="margin-bottom:16px;">
-        <label class="form-label" style="font-size:0.8rem;color:#94a3b8;margin-bottom:6px;display:block;">Email</label>
-        <input type="email" class="form-input" id="auth-email" placeholder="driver@drivepulse.com"
-          style="width:100%;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#e2e8f0;font-size:0.9rem;">
+
+      <!-- Tab Switcher -->
+      <div
+        style="display:flex; gap:4px; background:rgba(255,255,255,0.04); border-radius:12px; padding:4px; margin-bottom:24px;">
+        <button id="auth-tab-login"
+          style="flex:1; padding:10px; border-radius:10px; border:none; font-size:0.85rem; font-weight:600; cursor:pointer; background:rgba(0,212,255,0.15); color:#00d4ff; transition:all 0.3s;">
+          Log In
+        </button>
+        <button id="auth-tab-register"
+          style="flex:1; padding:10px; border-radius:10px; border:none; font-size:0.85rem; font-weight:600; cursor:pointer; background:transparent; color:#64748b; transition:all 0.3s;">
+          Create Account
+        </button>
       </div>
-      <div class="form-group" style="margin-bottom:24px;">
-        <label class="form-label"
-          style="font-size:0.8rem;color:#94a3b8;margin-bottom:6px;display:block;">Password</label>
-        <input type="password" class="form-input" id="auth-password" placeholder="••••••••"
-          style="width:100%;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#e2e8f0;font-size:0.9rem;">
+
+      <!-- LOGIN FORM -->
+      <div id="auth-login-form">
+        <div style="margin-bottom:14px;">
+          <label
+            style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:6px;">Email
+            Address <span style="color:#ef4444;">*</span></label>
+          <input type="email" id="auth-login-email" placeholder="you@example.com" required
+            style="width:100%; padding:12px 14px; border-radius:10px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:#e2e8f0; font-size:0.9rem; outline:none; transition:border 0.3s;"
+            onfocus="this.style.borderColor='#00d4ff'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
+        </div>
+        <div style="margin-bottom:20px;">
+          <label
+            style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:6px;">Password
+            <span style="color:#ef4444;">*</span></label>
+          <input type="password" id="auth-login-password" placeholder="••••••••" required minlength="6"
+            style="width:100%; padding:12px 14px; border-radius:10px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:#e2e8f0; font-size:0.9rem; outline:none; transition:border 0.3s;"
+            onfocus="this.style.borderColor='#00d4ff'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
+        </div>
+        <button id="auth-login-btn"
+          style="width:100%; padding:14px; border-radius:12px; border:none; font-size:0.95rem; font-weight:700; cursor:pointer; background:linear-gradient(135deg,#00d4ff,#0088ff); color:white; transition:all 0.3s; box-shadow:0 4px 15px rgba(0,212,255,0.3);">
+          <i class="fas fa-right-to-bracket"></i>&nbsp; Log In
+        </button>
       </div>
-      <button class="primary-btn" id="auth-login-btn"
-        style="width:100%;padding:12px;border-radius:12px;font-size:0.9rem; margin-bottom: 12px; font-weight:600;">Log
-        In</button>
-      <button class="glass-card" id="auth-register-btn"
-        style="width:100%;padding:12px;border-radius:12px;font-size:0.9rem; border:1px solid rgba(255,255,255,0.15); background:transparent; color:#00d4ff; font-weight:600; cursor:pointer;">Register
-        New Account</button>
+
+      <!-- REGISTER FORM (hidden by default) -->
+      <div id="auth-register-form" style="display:none;">
+        <div style="margin-bottom:14px;">
+          <label
+            style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:6px;">Full
+            Name <span style="color:#ef4444;">*</span></label>
+          <input type="text" id="auth-reg-name" placeholder="John Doe" required
+            style="width:100%; padding:12px 14px; border-radius:10px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:#e2e8f0; font-size:0.9rem; outline:none; transition:border 0.3s;"
+            onfocus="this.style.borderColor='#00d4ff'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
+        </div>
+        <div style="margin-bottom:14px;">
+          <label
+            style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:6px;">Email
+            Address <span style="color:#ef4444;">*</span></label>
+          <input type="email" id="auth-reg-email" placeholder="you@example.com" required
+            style="width:100%; padding:12px 14px; border-radius:10px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:#e2e8f0; font-size:0.9rem; outline:none; transition:border 0.3s;"
+            onfocus="this.style.borderColor='#00d4ff'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
+        </div>
+        <div style="margin-bottom:14px;">
+          <label
+            style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:6px;">Password
+            <span style="color:#ef4444;">*</span> <span
+              style="color:#475569; font-size:0.65rem; text-transform:none;">(min. 6 characters)</span></label>
+          <input type="password" id="auth-reg-password" placeholder="••••••••" required minlength="6"
+            style="width:100%; padding:12px 14px; border-radius:10px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:#e2e8f0; font-size:0.9rem; outline:none; transition:border 0.3s;"
+            onfocus="this.style.borderColor='#00d4ff'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
+        </div>
+        <div style="margin-bottom:14px;">
+          <label
+            style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:6px;">Vehicle
+            Name <span style="color:#ef4444;">*</span></label>
+          <input type="text" id="auth-reg-vehicle" placeholder="e.g. Honda Activa, Maruti Swift" required
+            style="width:100%; padding:12px 14px; border-radius:10px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:#e2e8f0; font-size:0.9rem; outline:none; transition:border 0.3s;"
+            onfocus="this.style.borderColor='#00d4ff'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
+        </div>
+        <div style="margin-bottom:20px;">
+          <label
+            style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:6px;">Vehicle
+            Type <span style="color:#ef4444;">*</span></label>
+          <select id="auth-reg-vehicle-type" required
+            style="width:100%; padding:12px 14px; border-radius:10px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:#e2e8f0; font-size:0.9rem; outline:none; appearance:none; -webkit-appearance:none; cursor:pointer;">
+            <option value="" disabled selected style="color:#475569;">Select your vehicle</option>
+            <option value="car">🚗 Car</option>
+            <option value="bike">🏍️ Motorcycle / Bike</option>
+            <option value="scooter">🛵 Scooter</option>
+            <option value="truck">🚛 Truck</option>
+            <option value="bus">🚌 Bus</option>
+            <option value="other">🚙 Other</option>
+          </select>
+        </div>
+        <button id="auth-register-btn"
+          style="width:100%; padding:14px; border-radius:12px; border:none; font-size:0.95rem; font-weight:700; cursor:pointer; background:linear-gradient(135deg,#00d4ff,#0088ff); color:white; transition:all 0.3s; box-shadow:0 4px 15px rgba(0,212,255,0.3);">
+          <i class="fas fa-user-plus"></i>&nbsp; Create Account
+        </button>
+      </div>
+
+      <!-- Error Message -->
       <div id="auth-error-msg"
-        style="color:#ef4444; font-size:0.8rem; text-align:center; margin-top:16px; display:none; min-height: 20px;">
+        style="color:#ef4444; font-size:0.8rem; text-align:center; margin-top:16px; display:none; padding:10px; background:rgba(239,68,68,0.1); border-radius:8px; border:1px solid rgba(239,68,68,0.2);">
       </div>
+
+      <!-- Footer -->
+      <p style="text-align:center; color:#334155; font-size:0.7rem; margin-top:24px;">
+        By continuing, you agree to DrivePulse Terms of Service.<br>Your data is secured with end-to-end encryption.
+      </p>
     </div>
   </div>
 

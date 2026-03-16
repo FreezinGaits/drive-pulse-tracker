@@ -2,8 +2,8 @@
    DrivePulse – Supabase Infrastructure Sync & Auth
    ============================================ */
 const SupabaseSync = (() => {
-    const SUPABASE_URL = 'https://eowglcxngpiivyrcwsve.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVvd2dsY3huZ3BpaXZ5cmN3c3ZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1NTc3OTgsImV4cCI6MjA4OTEzMzc5OH0.6Ry-cZlDqR9JiUlovXNcW8Z3lFDoDwEC6NBXx3osrMQ';
+    const SUPABASE_URL = window.CONFIG.SUPABASE_URL;
+    const SUPABASE_ANON_KEY = window.CONFIG.SUPABASE_ANON_KEY;
 
     let supaClient;
     if (typeof window.supabase !== 'undefined') {
@@ -15,7 +15,7 @@ const SupabaseSync = (() => {
     let _syncInterval = null;
 
     function isConfigured() {
-        return SUPABASE_URL !== 'YOUR_SUPABASE_URL' && SUPABASE_ANON_KEY !== 'YOUR_SUPABASE_ANON_KEY' && supaClient;
+        return SUPABASE_URL && SUPABASE_ANON_KEY && supaClient;
     }
 
     // ═══════════════════════════════════════════
