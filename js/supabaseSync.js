@@ -35,11 +35,36 @@ const SupabaseSync = (() => {
         return data.session;
     }
 
-    async function register(email, password) {
+    async function register(email, password, metadata = {}) {
         if (!isConfigured()) throw new Error("Supabase is not configured.");
-        const { data, error } = await supaClient.auth.signUp({ email, password });
+        const { data, error } = await supaClient.auth.signUp({
+            email,
+            password,
+            options: {
+                data: {
+                    name: metadata.name || '',
+                    vehicle_name: metadata.vehicle || '',
+                    vehicle_type: metadata.vehicleType || 'car'
+                }
+            }
+        });
         if (error) throw error;
-        return data.session;
+
+        // The DB trigger auto-creates the profile row with id+email.
+        // Now UPDATE it to fill in the name and vehicle_type.
+        const userId = data.user?.id;
+        if (userId) {
+            try {
+                await supaClient.from('profiles').update({
+                    name: metadata.name || null,
+                    vehicle_type: metadata.vehicleType || 'Car'
+                }).eq('id', userId);
+            } catch (e) {
+                console.warn('SupabaseSync: Profile update after signup failed:', e.message);
+            }
+        }
+
+        return { session: data.session, user: data.user };
     }
 
     async function logout() {

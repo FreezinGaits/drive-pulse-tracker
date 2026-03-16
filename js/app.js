@@ -238,19 +238,30 @@
             registerBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>&nbsp; Creating Account...';
             registerBtn.disabled = true;
             try {
-                await SupabaseSync.register(email, password);
-                authModal.style.display = 'none';
-                SupabaseSync.startAutoSync();
-                showToast("Account created successfully!");
+                const result = await SupabaseSync.register(email, password, {
+                    name, vehicle, vehicleType
+                });
 
-                // Save profile data locally
+                // Save profile data locally regardless
                 const prof = await DB.getProfile();
                 prof.name = name;
                 prof.email = email;
                 prof.vehicle = vehicle;
                 prof.vehicleType = vehicleType;
                 await DB.saveProfile(prof);
-                await loadProfile();
+
+                if (result.session) {
+                    // Email confirmation NOT required — user is logged in immediately
+                    authModal.style.display = 'none';
+                    SupabaseSync.startAutoSync();
+                    showToast("Account created successfully!");
+                    await loadProfile();
+                } else {
+                    // Email confirmation IS required by Supabase
+                    showAuthError("✅ Account created! Please check your email (" + email + ") to verify your account, then come back and Log In.");
+                    // Switch to login tab
+                    tabLogin?.click();
+                }
             } catch (err) {
                 showAuthError(err.message);
             }
