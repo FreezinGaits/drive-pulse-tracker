@@ -1326,17 +1326,16 @@
           <label
             style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:6px;">Email
             Address <span style="color:#ef4444;">*</span></label>
-          <input type="email" id="auth-login-email" placeholder="you@example.com" required
-            style="width:100%; padding:12px 14px; border-radius:10px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:#e2e8f0; font-size:0.9rem; outline:none; transition:border 0.3s;"
-            onfocus="this.style.borderColor='#00d4ff'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
+          <input type="email" id="auth-login-email" placeholder="you@example.com" required class="auth-input"
+            style="width:100%; padding:12px 14px; border-radius:10px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:#e2e8f0; font-size:0.9rem; outline:none; transition:border 0.3s;">
         </div>
         <div style="margin-bottom:20px;">
           <label
             style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:6px;">Password
             <span style="color:#ef4444;">*</span></label>
           <input type="password" id="auth-login-password" placeholder="••••••••" required minlength="6"
-            style="width:100%; padding:12px 14px; border-radius:10px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:#e2e8f0; font-size:0.9rem; outline:none; transition:border 0.3s;"
-            onfocus="this.style.borderColor='#00d4ff'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
+            class="auth-input"
+            style="width:100%; padding:12px 14px; border-radius:10px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:#e2e8f0; font-size:0.9rem; outline:none; transition:border 0.3s;">
         </div>
         <button id="auth-login-btn"
           style="width:100%; padding:14px; border-radius:12px; border:none; font-size:0.95rem; font-weight:700; cursor:pointer; background:linear-gradient(135deg,#00d4ff,#0088ff); color:white; transition:all 0.3s; box-shadow:0 4px 15px rgba(0,212,255,0.3);">
@@ -1350,34 +1349,31 @@
           <label
             style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:6px;">Full
             Name <span style="color:#ef4444;">*</span></label>
-          <input type="text" id="auth-reg-name" placeholder="John Doe" required
-            style="width:100%; padding:12px 14px; border-radius:10px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:#e2e8f0; font-size:0.9rem; outline:none; transition:border 0.3s;"
-            onfocus="this.style.borderColor='#00d4ff'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
+          <input type="text" id="auth-reg-name" placeholder="John Doe" required class="auth-input"
+            style="width:100%; padding:12px 14px; border-radius:10px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:#e2e8f0; font-size:0.9rem; outline:none; transition:border 0.3s;">
         </div>
         <div style="margin-bottom:14px;">
           <label
             style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:6px;">Email
             Address <span style="color:#ef4444;">*</span></label>
-          <input type="email" id="auth-reg-email" placeholder="you@example.com" required
-            style="width:100%; padding:12px 14px; border-radius:10px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:#e2e8f0; font-size:0.9rem; outline:none; transition:border 0.3s;"
-            onfocus="this.style.borderColor='#00d4ff'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
+          <input type="email" id="auth-reg-email" placeholder="you@example.com" required class="auth-input"
+            style="width:100%; padding:12px 14px; border-radius:10px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:#e2e8f0; font-size:0.9rem; outline:none; transition:border 0.3s;">
         </div>
         <div style="margin-bottom:14px;">
           <label
             style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:6px;">Password
             <span style="color:#ef4444;">*</span> <span
               style="color:#475569; font-size:0.65rem; text-transform:none;">(min. 6 characters)</span></label>
-          <input type="password" id="auth-reg-password" placeholder="••••••••" required minlength="6"
-            style="width:100%; padding:12px 14px; border-radius:10px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:#e2e8f0; font-size:0.9rem; outline:none; transition:border 0.3s;"
-            onfocus="this.style.borderColor='#00d4ff'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
+          <input type="password" id="auth-reg-password" placeholder="••••••••" required minlength="6" class="auth-input"
+            style="width:100%; padding:12px 14px; border-radius:10px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:#e2e8f0; font-size:0.9rem; outline:none; transition:border 0.3s;">
         </div>
         <div style="margin-bottom:14px;">
           <label
             style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:6px;">Vehicle
             Name <span style="color:#ef4444;">*</span></label>
           <input type="text" id="auth-reg-vehicle" placeholder="e.g. Honda Activa, Maruti Swift" required
-            style="width:100%; padding:12px 14px; border-radius:10px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:#e2e8f0; font-size:0.9rem; outline:none; transition:border 0.3s;"
-            onfocus="this.style.borderColor='#00d4ff'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
+            class="auth-input"
+            style="width:100%; padding:12px 14px; border-radius:10px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:#e2e8f0; font-size:0.9rem; outline:none; transition:border 0.3s;">
         </div>
         <div style="margin-bottom:20px;">
           <label

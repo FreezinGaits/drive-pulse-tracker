@@ -3166,3 +3166,8 @@ body::before {
 .maplibregl-ctrl-group { background: rgba(10,14,26,0.9) !important; border-radius: 12px !important; }
 .maplibregl-ctrl-group button { color: white !important; }
 
+/* ── Auth Modal Input Focus ── */
+.auth-input:focus {
+    border-color: #00d4ff !important;
+    box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.15);
+}
